@@ -7,7 +7,10 @@ Usage:
       mode flags: 
           --freq - frequency (default)
           --pi - nucleotide diversity
+          --theta 
       for samtools mpileup input you may call samtools mpileup --h 
+
+The chosen statistics are printed in standard output with respect to corresponding samtools mpipleup lines
 
 Requirements:
 
