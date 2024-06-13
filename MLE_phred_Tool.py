@@ -35,7 +35,7 @@ def loglhoodDiploid(p,   ph):
     return -np.prod([ sum(hmzglik(i,p,ph)for i in range(4))+2*sum(htrzglik(a,b,p,ph) for a,b in combinations(range(4),2))])
 
 def loglhoodPiDiploidB(p,x, y, phs):
-    return -np.prod([-loglhoodDiploidB(p, x, y, ph)-loglhoodDiploidB(1-p, x, y, ph) for ph in phs])
+    return loglhoodDiploidB(p, x, y, phs)+loglhoodDiploidB(1-p, x, y, phs)
     # return -np.prod([ p**2*np.prod(ph[0])*np.prod([(1-pr)/3 for pr in ph[1]])+2*p*(1-p)*htrzglik(0,1,p,ph)+
     #                      (1-p)**2*np.prod([(1-pr)/3 for pr in ph[0]])*np.prod( ph[1])])
 
@@ -75,7 +75,7 @@ while True:
     stats=stats.split(b'\t')
     phreds=[[1-10**(-0.1*(i-33)) for i in stats[j]] for j in range(5,len(stats),3)]
     nucleotides=stats[4::3]#4::3
-    print(stats)
+    # print(stats)
     phs=[{b'a':[],b"g":[],b'c':[],b't':[]} for i in range(len(nucleotides))]
     ns=[{b'a':0,b"g":0,b'c':0} for i in range(len(nucleotides))]
     skip=0
