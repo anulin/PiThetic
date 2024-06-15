@@ -67,8 +67,8 @@ if '--pi' in sys.argv :
     pi=True
 if '--theta' in sys.argv:
     window=int(sys.argv[sys.argv.index('--theta')+1])
-    step=int(sys.argv[sys.argv.index('--theta')+2])
-    strt += 3
+    # step=int(sys.argv[sys.argv.index('--theta')+2])
+    strt += 2
 if not pi+window or '--freq' in sys.argv:
     if '--freq' in sys.argv:
         strt += 1
@@ -83,7 +83,7 @@ N=10**6
 for i in range(2, sum(ii[-4:]=='.bam' for ii in sys.argv) + 1):
     times.append(ra.geometric(1 - (4*N-i*(i-1))/(4*N), size=200000))
 while True:
-
+    
     tns=0
     stats = proc.stdout.readline()
     if not stats:
@@ -100,6 +100,7 @@ while True:
     if window:
         ncld=b''
         sampsz=0
+        ccc += 1
     for i in range (len(nucleotides)):
         counter=0
         if window:
@@ -155,13 +156,14 @@ while True:
     # allfrec=op.minimize(loglhoodDiploid,[0.25,0.25,0.25],args=list(phs[-1].values()),bounds=[[0,1]], constraints=op.LinearConstraint(np.diag([1,1,1]),0,1))
     # print(' '.join(str(i).upper() for i in zip(ns[-1].keys(), allfrec['x'])))
     x,y=sorted( phs[0].keys(), key=lambda x:sum(len(phs[i][x]) for i in range(len(ns))) )[-2:]
-    ccc += 1
+
 
     if window and round(sampsz)>1:
         muts+=(op.minimize_scalar(loglhoodDiploidB, args=(y, x, phs), bounds=[0, 1])['x']<=1-1/round(sampsz))/harmonic(round(sampsz)-1)
     if ccc == window:
         print("theta:", muts)
         ccc=0
+        muts=0
     if ff:
         print('frequency:',op.minimize_scalar(loglhoodDiploidB,args=(y,x,phs),bounds=[0,1])['x'],str(y+b'('+x+b')'))
     if pi:
