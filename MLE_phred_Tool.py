@@ -37,7 +37,8 @@ def loglhoodDiploidB(p, x, y, phs):
 def loglhoodDiploid(p,   ph):
     return -np.prod([ sum(hmzglik(i,p,ph)for i in range(4))+2*sum(htrzglik(a,b,p,ph) for a,b in combinations(range(4),2))])
 def loglhoodPiDiploidB(p,x, y, phs):
-    return loglhoodDiploidB(p, x, y, phs)+loglhoodDiploidB(1-p, x, y, phs)
+    return sum(loglhoodDiploidB(p, x, y, phs)+loglhoodDiploidB(p, y, x, phs) for x,y in combinations({b'a',b't',b'c',b'g'},2))
+    # return loglhoodDiploidB(p, x, y, phs)+loglhoodDiploidB(p, y, x, phs)
     # return -np.prod([ p**2*np.prod(ph[0])*np.prod([(1-pr)/3 for pr in ph[1]])+2*p*(1-p)*htrzglik(0,1,p,ph)+
     #                      (1-p)**2*np.prod([(1-pr)/3 for pr in ph[0]])*np.prod( ph[1])])
 def thetafindexp (nu,k,timesums):
@@ -49,6 +50,7 @@ def thetamedunb (nu,k,timesums):
 #     p1,p2,p3=arr
 #     return -np.sum(np.log([p1*pr+(1-p1)*(1-pr)/3 for pr in ph[:m1]]))-np.sum(np.log([p2*pr+(1-p2)*(1-pr)/3 for pr in ph[m1:m2]])) \
 #            -np.sum(np.log([p3*pr+(1-p3)*(1-pr)/3 for pr in ph[m2:m3]]))-np.sum(np.log([(p2+p1+p3)*(1-pr)/3+(1-p1-p2-p3)*(pr) for pr in ph[m3:]]))
+
 if '--h' in sys.argv:
     print('''MLE_phred_Tool scoresfile --[flag]  [samtools mpileup input] 
     --h - help
@@ -83,7 +85,7 @@ N=10**6
 for i in range(2, sum(ii[-4:]=='.bam' for ii in sys.argv) + 1):
     times.append(ra.geometric(1 - (4*N-i*(i-1))/(4*N), size=200000))
 while True:
-    
+
     tns=0
     stats = proc.stdout.readline()
     if not stats:
@@ -167,4 +169,5 @@ while True:
     if ff:
         print('frequency:',op.minimize_scalar(loglhoodDiploidB,args=(y,x,phs),bounds=[0,1])['x'],str(y+b'('+x+b')'))
     if pi:
-        print('nucleotide diversity:',op.minimize_scalar(loglhoodPiDiploidB,args=(y,x,phs),bounds=[0,0.5])['x'])
+        p=op.minimize_scalar(loglhoodPiDiploidB,args=(y,x,phs),bounds=[0,0.5])['x']
+        print('nucleotide diversity:',p*(1-p)*2)
