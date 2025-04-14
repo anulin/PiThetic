@@ -2,7 +2,7 @@
 The tool can calculate allele frequency, nucleotide diversity and  Watterson theta from a multisample .bam or set of .bam files.
 Usage:
 
-    python3 MLE_phred_Tool scoresfile.py --[flag]  [in1.bam in2.bam ...  or other samtools mpileup input]
+    PiThetic.py --[flag]  [in1.bam in2.bam ...  or other samtools mpileup input]
       --h - help
       mode flags: 
         --freq - frequency (default)
