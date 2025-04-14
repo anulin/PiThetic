@@ -13,7 +13,7 @@ Usage:
         --accurate - improves accuracy for window statistics (only) D' and Pi but increases computation time
       for samtools mpileup input you may call samtools mpileup --h 
 
-The chosen statistics are printed in standard output with respect to corresponding samtools mpipleup lines
+The chosen statistics are printed in standard output with respect to corresponding samtools mpileup lines
 
 Requirements:
 
