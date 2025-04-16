@@ -281,6 +281,7 @@ if '--h' in sys.argv:
         --accurate - improves accuracy for window statistics (only) D' and Pi but increases computation time
     for samtools mpileup input you may call samtools mpileup --h
     ''')
+    exit()
 
 windowD=False
 pi=False
@@ -443,4 +444,4 @@ while True:
                 pis=0
                 pidata=[]
         else:
-            print('nucleotide diversity:',op.minimize_scalar(loglhoodPiDiploidB,args=(y,x,phs),bounds=[0,0.5])['x'])
+            print('nucleotide diversity:',op.minimize_scalar(loglhoodPiDiploidB,args=(phs),bounds=[0,0.5])['x'])
