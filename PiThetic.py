@@ -17,7 +17,6 @@ def harmonic(n):
     return digamma(n+1)+np.euler_gamma
     return sum(1/(i) for i in range(1,n+1))
 
-
 def htrzglik(a,b,p,ph):
     if b==3:
         p2=1-sum(p)
@@ -25,7 +24,6 @@ def htrzglik(a,b,p,ph):
         p2=p[b]
     c,d={0,1,2,3}-{a,b}
     return p[a]*p2*np.prod([(1+2*pr)/6 for pr in ph[a]+ph[b]]+[(1-pr)/3 for pr in ph[d]+ph[c]])
-
 def hmzglik(a,p,ph):
 
     b,c,d= {0, 1, 2, 3}-{a}
@@ -34,6 +32,7 @@ def hmzglik(a,p,ph):
     else:
         p=p[a]
     return p**2*np.prod(ph[a])*np.prod([(1-pr)/3 for pr in ph[b]+ph[c]+ph[d]])
+
 def loglikelihood(p, m,  ph):
     return -np.sum(np.log([p*pr+(1-p)*(1-pr)/3 for pr in ph[:m]]))-np.sum(np.log([p*(1-pr)/3+(1-p)*(pr) for pr in ph[m:]]))
 def lhoodDiploidB(p, x, y, phs):
@@ -50,21 +49,21 @@ def mean(p,phs,x,y):
 
     c,d={b'a',b't',b'c',b'g'}-{x, y}
 
-    p11=np.array(p**2* np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]])/
+    p11=np.array([p**2* np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]])/
                  ( p**2*np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
                    p*(1-p)*2 *np.prod([(1+2*pr)/6 for pr in ph[x]+ph[y]]+[(1-pr)/3 for pr in ph[d]+ph[c]]) +
-                   (1-p)**2*np.prod([(1-pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])) for ph in phs)
-    p12=np.array( 2 *np.prod([(1+2*pr)/6 for pr in ph[x]+ph[y]]+[(1-pr)/3 for pr in ph[d]+ph[c]])/
+                   (1-p)**2*np.prod([(1-pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])) for ph in phs])
+    p12=np.array([ 2 *np.prod([(1+2*pr)/6 for pr in ph[x]+ph[y]]+[(1-pr)/3 for pr in ph[d]+ph[c]])/
                   (p ** 2 * np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
                    p * (1 - p) * 2 * np.prod([(1 + 2 * pr) / 6 for pr in ph[x] + ph[y]] + [(1 - pr) / 3 for pr in ph[d] + ph[c]]) +
-                   (1 - p) ** 2 * np.prod([(1 - pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])) for ph in phs)
+                   (1 - p) ** 2 * np.prod([(1 - pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])) for ph in phs])
 
 
     return sum(2*p11+p12)-p
 def meanfrqs(phs):
     vals=[]
     for x, y in combinations({b'a', b't', b'c', b'g'}, 2):
-        vals.append(op.root_scalar(lambda p:mean, args=(phs,x,y),x0=0.3,x1=0.7).root)
+        vals.append(op.root_scalar(mean, args=(phs,x,y),x0=0.3,x1=0.7).root)
     return vals
 def allelprb(ps,phs):
     prs = []
@@ -72,9 +71,9 @@ def allelprb(ps,phs):
         x, y=combinations({b'a', b't', b'c', b'g'}, 2)[i]
         c, d = {b'a', b't', b'c', b'g'} - {x, y}
         p=ps[i]
-        prs.append(np.prod(p ** 2 * np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
+        prs.append(np.prod([p ** 2 * np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
                            p * (1 - p) * 2 * np.prod([(1 + 2 * pr) / 6 for pr in ph[x] + ph[y]] + [(1 - pr) / 3 for pr in ph[d] + ph[c]]) +
-                           (1 - p) ** 2 * np.prod([(1 - pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y]) for ph in phs))
+                           (1 - p) ** 2 * np.prod([(1 - pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y]) for ph in phs]))
         return prs
 def hrm(phs,ps):
     prs = []
@@ -83,24 +82,24 @@ def hrm(phs,ps):
         x, y = combinations({b'a', b't', b'c', b'g'}, 2)[i]
         c, d = {b'a', b't', b'c', b'g'} - {x, y}
         p = ps[i]
-        p11 = np.array(p * 2 * np.prod(ph[x] / 2) * np.prod([(1 - pr) / 6 for pr in ph[y] + ph[c] + ph[d]]) /
+        p11 = np.array([p * 2 * np.prod(ph[x] / 2) * np.prod([(1 - pr) / 6 for pr in ph[y] + ph[c] + ph[d]]) /
                        (p ** 2 * np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
                         p * (1 - p) * 2 * np.prod([(1 + 2 * pr) / 6 for pr in ph[x] + ph[y]] + [(1 - pr) / 3 for pr in
                                                                                                 ph[d] + ph[c]]) +
                         (1 - p) ** 2 * np.prod([(1 - pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])) for ph
-                       in phs)
-        p00 = np.array((1 - p) * 2 * np.prod([(1 - pr) / 6 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y] / 2) /
+                       in phs])
+        p00 = np.array([(1 - p) * 2 * np.prod([(1 - pr) / 6 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y] / 2) /
                        (p ** 2 * np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
                         p * (1 - p) * 2 * np.prod([(1 + 2 * pr) / 6 for pr in ph[x] + ph[y]] + [(1 - pr) / 3 for pr in
                                                                                                 ph[d] + ph[c]]) +
                         (1 - p) ** 2 * np.prod([(1 - pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])) for ph
-                       in phs)
+                       in phs])
         vals.append(harmonic(sum(2 - p11 - p00)-1))
-        prs.append(np.prod(p ** 2 * np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
+        prs.append(np.prod([p ** 2 * np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
                            p * (1 - p) * 2 * np.prod(
             [(1 + 2 * pr) / 6 for pr in ph[x] + ph[y]] + [(1 - pr) / 3 for pr in ph[d] + ph[c]]) +
                            (1 - p) ** 2 * np.prod([(1 - pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y]) for
-                           ph in phs))
+                           ph in phs]))
     return np.dot(prs,vals)/sum(prs)
 def Dp(phs,ps, muts):
     prs=[]
@@ -109,17 +108,17 @@ def Dp(phs,ps, muts):
         x, y = combinations({b'a', b't', b'c', b'g'}, 2)[i]
         c, d = {b'a', b't', b'c', b'g'} - {x, y}
         p = ps[i]
-        p11=np.array(p*2* np.prod(ph[x]/2) * np.prod([(1 - pr) / 6 for pr in ph[y] + ph[c] + ph[d]])/
+        p11=np.array([p*2* np.prod(ph[x]/2) * np.prod([(1 - pr) / 6 for pr in ph[y] + ph[c] + ph[d]])/
                      ( p**2*np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
                        p*(1-p)*2 *np.prod([(1+2*pr)/6 for pr in ph[x]+ph[y]]+[(1-pr)/3 for pr in ph[d]+ph[c]]) +
-                       (1-p)**2*np.prod([(1-pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])) for ph in phs)
-        p00=np.array((1-p)*2*np.prod([(1-pr) / 6 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y]/2)/
+                       (1-p)**2*np.prod([(1-pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])) for ph in phs])
+        p00=np.array([(1-p)*2*np.prod([(1-pr) / 6 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y]/2)/
                      ( p**2*np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
                        p*(1-p)*2 *np.prod([(1+2*pr)/6 for pr in ph[x]+ph[y]]+[(1-pr)/3 for pr in ph[d]+ph[c]]) +
-                       (1-p)**2*np.prod([(1-pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])) for ph in phs)
-        prs.append(np.prod(p ** 2 * np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
+                       (1-p)**2*np.prod([(1-pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])) for ph in phs])
+        prs.append(np.prod([p ** 2 * np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
                            p * (1 - p) * 2 * np.prod([(1 + 2 * pr) / 6 for pr in ph[x] + ph[y]] + [(1 - pr) / 3 for pr in ph[d] + ph[c]]) +
-                           (1 - p) ** 2 * np.prod([(1 - pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y]) for ph in phs))
+                           (1 - p) ** 2 * np.prod([(1 - pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y]) for ph in phs]))
         n=2*len(phs)
 
         var=(muts-1)/muts*((11 * n ** 2 - 7 * n + 6) / 9 / n / (n - 1)) / (harmonic(n - 1) ** 2  -polygamma(1,n)+np.pi**2/6 )+(n+1)/3/(n-1)/muts-1/harmonic(n-1)**2
@@ -132,7 +131,7 @@ def theta(phs):
     sqrs=[]
     for x, y in combinations({b'a', b't', b'c', b'g'}, 2):
         c,d={b'a',b't',b'c',b'g'}-{x, y}
-        p=op.root_scalar(lambda p: mean, args=(phs, x, y), x0=0.3, x1=0.7).root
+        p=op.root_scalar( mean, args=(phs, x, y), x0=0.3, x1=0.7).root
         # p11=np.array(p*2* np.prod(ph[x]/2) * np.prod([(1 - pr) / 6 for pr in ph[y] + ph[c] + ph[d]])/
         #              ( p**2*np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
         #                p*(1-p)*2 *np.prod([(1+2*pr)/6 for pr in ph[x]+ph[y]]+[(1-pr)/3 for pr in ph[d]+ph[c]]) +
@@ -142,17 +141,17 @@ def theta(phs):
         #                p*(1-p)*2 *np.prod([(1+2*pr)/6 for pr in ph[x]+ph[y]]+[(1-pr)/3 for pr in ph[d]+ph[c]]) +
         #                (1-p)**2*np.prod([(1-pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])) for ph in phs)
         # sz=sum(2-p11-p00)
-        p11=np.array(p**2* np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]])/
+        p11=np.array([p**2* np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]])/
                      ( p**2*np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
                        p*(1-p)*2 *np.prod([(1+2*pr)/6 for pr in ph[x]+ph[y]]+[(1-pr)/3 for pr in ph[d]+ph[c]]) +
-                       (1-p)**2*np.prod([(1-pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])) for ph in phs)
-        p00=np.array((1-p)**2*np.prod([(1-pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])/
+                       (1-p)**2*np.prod([(1-pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])) for ph in phs])
+        p00=np.array([(1-p)**2*np.prod([(1-pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])/
                      ( p**2*np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
                        p*(1-p)*2 *np.prod([(1+2*pr)/6 for pr in ph[x]+ph[y]]+[(1-pr)/3 for pr in ph[d]+ph[c]]) +
-                       (1-p)**2*np.prod([(1-pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])) for ph in phs)
-        prs.append(np.prod(p ** 2 * np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
+                       (1-p)**2*np.prod([(1-pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])) for ph in phs])
+        prs.append(np.prod([p ** 2 * np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
                            p * (1 - p) * 2 * np.prod([(1 + 2 * pr) / 6 for pr in ph[x] + ph[y]] + [(1 - pr) / 3 for pr in ph[d] + ph[c]]) +
-                           (1 - p) ** 2 * np.prod([(1 - pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y]) for ph in phs))
+                           (1 - p) ** 2 * np.prod([(1 - pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y]) for ph in phs]))
 
         vals.append((1-np.prod(p11)-np.prod(p00))/harmonic(2*len(phs)-1))
         sqrs.append(vals[-1]/harmonic(2*len(phs)-1))
@@ -167,17 +166,17 @@ def mutprob(phs,ps):
         c, d = {b'a', b't', b'c', b'g'} - {x, y}
         p = ps[i]
 
-        p11=np.array(p**2* np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]])/
+        p11=np.array([p**2* np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]])/
                      ( p**2*np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
                        p*(1-p)*2 *np.prod([(1+2*pr)/6 for pr in ph[x]+ph[y]]+[(1-pr)/3 for pr in ph[d]+ph[c]]) +
-                       (1-p)**2*np.prod([(1-pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])) for ph in phs)
-        p00=np.array((1-p)**2*np.prod([(1-pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])/
+                       (1-p)**2*np.prod([(1-pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])) for ph in phs])
+        p00=np.array([(1-p)**2*np.prod([(1-pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])/
                      ( p**2*np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
                        p*(1-p)*2 *np.prod([(1+2*pr)/6 for pr in ph[x]+ph[y]]+[(1-pr)/3 for pr in ph[d]+ph[c]]) +
-                       (1-p)**2*np.prod([(1-pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])) for ph in phs)
-        prs.append(np.prod(p ** 2 * np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
+                       (1-p)**2*np.prod([(1-pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])) for ph in phs])
+        prs.append(np.prod([p ** 2 * np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
                            p * (1 - p) * 2 * np.prod([(1 + 2 * pr) / 6 for pr in ph[x] + ph[y]] + [(1 - pr) / 3 for pr in ph[d] + ph[c]]) +
-                           (1 - p) ** 2 * np.prod([(1 - pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y]) for ph in phs))
+                           (1 - p) ** 2 * np.prod([(1 - pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y]) for ph in phs]))
 
         vals.append(1-np.prod(p11)-np.prod(p00))
 
@@ -200,17 +199,17 @@ def PAvg(phs,ps, **kwargs):
         c, d = {b'a', b't', b'c', b'g'} - {x, y}
         p = ps[i]
 
-        p11=np.array(p**2* np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]])/
+        p11=np.array([p**2* np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]])/
                      ( p**2*np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
                        p*(1-p)*2 *np.prod([(1+2*pr)/6 for pr in ph[x]+ph[y]]+[(1-pr)/3 for pr in ph[d]+ph[c]]) +
-                       (1-p)**2*np.prod([(1-pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])) for ph in phs)
-        p12=np.array( 2 *np.prod([(1+2*pr)/6 for pr in ph[x]+ph[y]]+[(1-pr)/3 for pr in ph[d]+ph[c]])/
+                       (1-p)**2*np.prod([(1-pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])) for ph in phs])
+        p12=np.array( [2 *np.prod([(1+2*pr)/6 for pr in ph[x]+ph[y]]+[(1-pr)/3 for pr in ph[d]+ph[c]])/
                       (p ** 2 * np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
                        p * (1 - p) * 2 * np.prod([(1 + 2 * pr) / 6 for pr in ph[x] + ph[y]] + [(1 - pr) / 3 for pr in ph[d] + ph[c]]) +
-                       (1 - p) ** 2 * np.prod([(1 - pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])) for ph in phs)
-        prs.append(np.prod(p ** 2 * np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
+                       (1 - p) ** 2 * np.prod([(1 - pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])) for ph in phs])
+        prs.append(np.prod([p ** 2 * np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
                            p * (1 - p) * 2 * np.prod([(1 + 2 * pr) / 6 for pr in ph[x] + ph[y]] + [(1 - pr) / 3 for pr in ph[d] + ph[c]]) +
-                           (1 - p) ** 2 * np.prod([(1 - pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y]) for ph in phs))
+                           (1 - p) ** 2 * np.prod([(1 - pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y]) for ph in phs]))
         #Vr=1/(4*p11+p12-(2*p11+p12)**2 )**2
         X=(2*p11+p12)#/Vr ; 2*p11/(p**2-p**4+p11-p11**2)
         p_2=(sum(X)**2-sum(X**2-2*p11))#/(sum(Vr)**2-sum(Vr**2-2/(p**2-p**4+p11-p11**2)))/4#/len(p11)/(2*len(p11)-1)/2#X^2-X==p^2*(n-1)*n
@@ -237,24 +236,24 @@ def sigma(phs,ps,prs):
     pprd={ph:np.prod([(1 + 2 * pr) / 6 for pr in ph[x]+ph[y] + ph[c] + ph[d]]) for ph in phs}
     for i in range(len(ps)):
         p = ps[i]
-        X2=np.array((p**2*prd[ph]-(1-p)**2*bprd[ph])**2/(prd[ph]*p**2+ p * (1 - p) * 2 * pprd[ph]+ (1-p)**2 * bprd[ph])+#no error ref
+        X2=np.array([(p**2*prd[ph]-(1-p)**2*bprd[ph])**2/(prd[ph]*p**2+ p * (1 - p) * 2 * pprd[ph]+ (1-p)**2 * bprd[ph])+#no error ref
                     (p**2*prd[ph]*coefs[ph]/3-(1-p)**2*bprd[ph]/coefs[ph]*3)**2/(prd[ph]*coefs[ph]/3*p**2+ p * (1 - p) * 2 * pprd[ph]+ (1-p)**2 * bprd[ph]/coefs[ph]*3)+#1error ref->alt
                     2*((p**2*prd[ph]*coefs[ph]/3-(1-p)**2*bprd[ph])**2/(prd[ph]*coefs[ph]/3*p**2+ p * (1 - p) * 2 * pprd[ph]*2*(1-3/(3+coefs[ph])) *(1-p)**2 * bprd[ph])) +# 1error wrong
                     (p**2*bprd[ph]-(1-p)**2*prd[ph])**2/(bprd[ph]*p**2+ p * (1 - p) * 2 * pprd[ph]+ (1-p)**2 * prd[ph])+#no error alt
                     (p**2*bprd[ph]/coefs[ph]*3-(1-p)**2*prd[ph]*coefs[ph]/3)**2/(bprd[ph]/coefs[ph]*3*p**2+ p * (1 - p) * 2 * pprd[ph]+ (1-p)**2 * prd[ph]*coefs[ph]/3)+#1error alt->ref
-                    2*((p**2*bprd[ph]-(1-p)**2*prd[ph]*coefs[ph]/3)**2/(bprd[ph]*p**2+ p * (1 - p) * 2 * pprd[ph]*2*(1-3/(3+coefs[ph]))* (1-p)**2 * prd[ph]*coefs[ph]/3)) +4*p-1 for ph in phs)# 1error wrong
-        Xp=np.array((p**4*prd[ph]**2-(1-p)**2*p**2*bprd[ph]*prd[ph])/(prd[ph]*p**2+ p * (1 - p) * 2 * pprd[ph]+ (1-p)**2 * bprd[ph])+#no error ref
+                    2*((p**2*bprd[ph]-(1-p)**2*prd[ph]*coefs[ph]/3)**2/(bprd[ph]*p**2+ p * (1 - p) * 2 * pprd[ph]*2*(1-3/(3+coefs[ph]))* (1-p)**2 * prd[ph]*coefs[ph]/3)) +4*p-1 for ph in phs])# 1error wrong
+        Xp=np.array([(p**4*prd[ph]**2-(1-p)**2*p**2*bprd[ph]*prd[ph])/(prd[ph]*p**2+ p * (1 - p) * 2 * pprd[ph]+ (1-p)**2 * bprd[ph])+#no error ref
                     (p**4*prd[ph]*coefs[ph]**2/9-(1-p)**2*p**2*bprd[ph]*prd[ph])/(prd[ph]*coefs[ph]/3*p**2+ p * (1 - p) * 2 * pprd[ph]+ (1-p)**2 * bprd[ph]/coefs[ph]*3)+#1error ref->alt
                     2*((p**4*prd[ph]*coefs[ph]**2/9-(1-p)**2*p**2*bprd[ph]*prd[ph]*coefs[ph]/3)/(prd[ph]*coefs[ph]/3*p**2+ p * (1 - p) * 2 * pprd[ph]*2*(1-3/(3+coefs[ph]))*(1-p)**2 * bprd[ph])) +# 1error wrong
                     (p**4*bprd[ph]**2-(1-p)**2*p**2*prd[ph]*bprd[ph])/(bprd[ph]*p**2+ p * (1 - p) * 2 * pprd[ph]+ (1-p)**2 * prd[ph])+#no error alt
                     (p**4*bprd[ph]**2/coefs[ph]**2*9-(1-p)**2*p**2*prd[ph]*bprd[ph])/(bprd[ph]/coefs[ph]*3*p**2+ p * (1 - p) * 2 * pprd[ph]+ (1-p)**2 * prd[ph]*coefs[ph]/3)+#1error alt->ref
-                    2*((p**4*bprd[ph]**2-(1-p)**2*p**2*prd[ph]*bprd[ph]*coefs[ph]/3)/(bprd[ph]*p**2+ p * (1 - p) * 2 * pprd[ph]*2*(1-3/(3+coefs[ph])) *(1-p)**2 * prd[ph]*coefs[ph]/3)) +p**2 for ph in phs)# 1error wrong
-        p2=np.array(p**4*prd[ph]**2/(prd[ph]*p**2+ p * (1 - p) * 2 * pprd[ph]+ (1-p)**2 * bprd[ph])+#no error ref
+                    2*((p**4*bprd[ph]**2-(1-p)**2*p**2*prd[ph]*bprd[ph]*coefs[ph]/3)/(bprd[ph]*p**2+ p * (1 - p) * 2 * pprd[ph]*2*(1-3/(3+coefs[ph])) *(1-p)**2 * prd[ph]*coefs[ph]/3)) +p**2 for ph in phs])# 1error wrong
+        p2=np.array([p**4*prd[ph]**2/(prd[ph]*p**2+ p * (1 - p) * 2 * pprd[ph]+ (1-p)**2 * bprd[ph])+#no error ref
                     p**4*prd[ph]*coefs[ph]**2/9/(prd[ph]*coefs[ph]/3*p**2+ p * (1 - p) * 2 * pprd[ph]+ (1-p)**2 * bprd[ph]/coefs[ph]*3)+#1error ref->alt
                     2*p**4*prd[ph]*coefs[ph]**2/9/(prd[ph]*coefs[ph]/3*p**2+ p * (1 - p) * 2 * pprd[ph]*2*(1-3/(3+coefs[ph]))*(1-p)**2 * bprd[ph]) +# 1error wrong
                     p**4*bprd[ph]**2/(bprd[ph]*p**2+ p * (1 - p) * 2 * pprd[ph]+ (1-p)**2 * prd[ph])+#no error alt
                     p**4*bprd[ph]**2/coefs[ph]**2*9/(bprd[ph]/coefs[ph]*3*p**2+ p * (1 - p) * 2 * pprd[ph]+ (1-p)**2 * prd[ph]*coefs[ph]/3)+#1error alt->ref
-                    2*p**4*bprd[ph]**2/(bprd[ph]*p**2+ p * (1 - p) * 2 * pprd[ph]*2*(1-3/(3+coefs[ph]))*(1-p)**2 * prd[ph]*coefs[ph]/3) +p**2 for ph in phs)# 1error wrong
+                    2*p**4*bprd[ph]**2/(bprd[ph]*p**2+ p * (1 - p) * 2 * pprd[ph]*2*(1-3/(3+coefs[ph]))*(1-p)**2 * prd[ph]*coefs[ph]/3) +p**2 for ph in phs])# 1error wrong
         N=2*len(phs)
         vals.append((sum(X2)*(2*N-1-4*p*(N-1)+4*p**2*(N-1)*(N-2)/(2*N-1))+4*sum(Xp)*(-1+8*p*(N-1)/(2*N-1))+8*p**3*N*(N-1)*(2*N-3))/N**2/(2*N-1)+
                     (N-1)/N*4*p**2+(sum(X2)**2-sum(X2**2))/N**2/(2*N-1)**2+(4*p**4*(N-1)*(4*(N-2)**2+1)+4*sum(p2))/N/(2*N-1)**2-pi**2)
@@ -270,7 +269,7 @@ def thetamedunb (nu,k,timesums):
 #            -np.sum(np.log([p3*pr+(1-p3)*(1-pr)/3 for pr in ph[m2:m3]]))-np.sum(np.log([(p2+p1+p3)*(1-pr)/3+(1-p1-p2-p3)*(pr) for pr in ph[m3:]]))
 
 if '--h' in sys.argv:
-    print('''MLE_phred_Tool scoresfile --[flag]  [samtools mpileup input] 
+    print('''PiThetic.py --[flag]  [samtools mpileup input] 
     --h - help
     mode flags: 
         --freq - frequency (default)
@@ -409,7 +408,7 @@ while True:
 
     if window and round(sampsz)>1:
         tmp=theta(phs)
-        thetas+= tmp[0]
+        thetas+= tmp#[0]
         #thetavrs+=tmp[1]
     if window and ccc == window:
         print("theta:", thetas)#/thetavrs*window)
