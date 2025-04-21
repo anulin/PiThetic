@@ -20,3 +20,5 @@ The chosen statistics are printed in standard output with respect to correspondi
 ### Requirements:
 
 [samtools](https://www.htslib.org/)
+
+#### More detailed [manual](https://github.com/anulin/PiThetic/blob/master/Manual.md)
