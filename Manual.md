@@ -1,5 +1,5 @@
 
-### Manual
+# Manual
 ## Requirements
 The tool is using [samtools](https://www.htslib.org/) 
 ## Installation
