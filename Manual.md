@@ -1,6 +1,3 @@
-layout: page
-title: "Manual"
-permalink: /manual
 
 ### Manual
 ## Requirements
