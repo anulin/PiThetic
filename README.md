@@ -1,6 +1,7 @@
 # PiThetic 
 The tool can calculate allele frequency, nucleotide diversity and  Watterson theta from a multisample .bam or set of .bam files.
-Usage:
+
+### Usage:
 
     PiThetic.py --[flag]  [in1.bam in2.bam ...  or other samtools mpileup input]
       --h - help
@@ -16,6 +17,6 @@ Usage:
 
 The chosen statistics are printed in standard output with respect to corresponding samtools mpileup lines
 
-Requirements:
+### Requirements:
 
-    samtools
+[samtools](https://www.htslib.org/)
