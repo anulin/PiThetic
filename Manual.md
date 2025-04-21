@@ -29,6 +29,7 @@ For this purpose the list of nonsynonymous/synonymous positions has to be specif
 (chromosome and position) and start counting from 1. BED files contain at least 3 columns (chromosome, start and end position) and are 0-based half-open.
 While it is possible to mix both position-list and BED coordinates in the same file, this is strongly ill advised due to the differing coordinate systems.
 
-Usage example:
+$\pi_n$ usage example:
 
     PiThetic.py --pi -l nonsynSNP.txt alignment1.bam alignment2.bam alignment3.bam alignment4.bam 
+__--accurate__ option increases the computation time for D' and $\pi$ proportionally to the window size specified. Thus a window of 1000 will increase computation time 1000 times
