@@ -2,7 +2,7 @@
 import subprocess
 import sys
 from itertools import combinations
-
+from multiprocessing import Pool
 import numpy as np
 import scipy.optimize as op
 from numpy import random as ra
@@ -11,8 +11,7 @@ from scipy.stats import poisson
 
 # from os import environ
 # print(environ['OMP_NUM_THREADS'] )
-rts=[]
-realvar=[]
+
 def harmonic(n):
     return digamma(n+1)+np.euler_gamma
     return sum(1/(i) for i in range(1,n+1))
@@ -267,180 +266,223 @@ def thetamedunb (nu,k,timesums):
 #     p1,p2,p3=arr
 #     return -np.sum(np.log([p1*pr+(1-p1)*(1-pr)/3 for pr in ph[:m1]]))-np.sum(np.log([p2*pr+(1-p2)*(1-pr)/3 for pr in ph[m1:m2]])) \
 #            -np.sum(np.log([p3*pr+(1-p3)*(1-pr)/3 for pr in ph[m2:m3]]))-np.sum(np.log([(p2+p1+p3)*(1-pr)/3+(1-p1-p2-p3)*(pr) for pr in ph[m3:]]))
+if __name__ == '__main__':
 
-if '--h' in sys.argv:
-    print('''PiThetic.py --[flag]  [samtools mpileup input] 
-    --h - help
-    mode flags: 
-        --freq - frequency (default)
-        --pi - nucleotide diversity
-        --pi [window] - calculate nucleotide diversity in window (non-MLE)
-        --theta [window] - Watterson theta caclulated within windows of provided size
-        --D [window] -calculates D'
-        --accurate - improves accuracy for window statistics (only) D' and Pi but increases computation time
-    for samtools mpileup input you may call samtools mpileup --h
-    ''')
-    exit()
-
-windowD=False
-pi=False
-ff=False
-window=False
-strt=1#data start column
-cpi=0
-wpi=0
-accurate=False
-if  '--accurate' in sys.argv :
-    strt += 1
-    accurate=True
-if '--pi' in sys.argv :
-    if sys.argv[sys.argv.index('--pi')+1].isdigit():
-        strt+=1
-        wpi=int(sys.argv[sys.argv.index('--pi')+1])
-
-    strt+=1
-    pi=True
-
-if wpi or windowD:
-    pidata=[]
-if '--theta' in sys.argv:
-    window=int(sys.argv[sys.argv.index('--theta')+1])
-    # step=int(sys.argv[sys.argv.index('--theta')+2])
-    strt += 2
-if '--D' in sys.argv:
-    windowD=int(sys.argv[sys.argv.index('--D')+1])
-    # step=int(sys.argv[sys.argv.index('--theta')+2])
-    strt += 2
-if not pi+window or '--freq' in sys.argv:
-    if '--freq' in sys.argv:
+    if '--h' in sys.argv:
+        print('''PiThetic.py --[flag]  [samtools mpileup input] 
+        --h - help
+        mode flags: 
+            --freq - frequency (default)
+            --pi - nucleotide diversity
+            --pi [window] - calculate nucleotide diversity in window (non-MLE)
+            --theta [window] - Watterson theta caclulated within windows of provided size
+            --D [window] -calculates D'
+            --accurate - improves accuracy for window statistics (only) D' and Pi but increases computation time
+            --t - number of threads (default 1)
+        for samtools mpileup input you may call samtools mpileup --h
+        ''')
+        exit()
+    thrds=1
+    tlsize=0
+    windowD=False
+    pi=False
+    ff=False
+    window=False
+    strt=1#data start column
+    cpi=0
+    wpi=0
+    accurate=False
+    if  '--t' in sys.argv :
+        strt += 2
+        thrds=int(sys.argv[sys.argv.index('--t')+1])
+    if thrds>1:
+        pool=Pool(thrds)
+        tlsize=max(8,thrds)
+    if  '--accurate' in sys.argv :
         strt += 1
-    ff=True
-arg=sys.argv[strt:]
-proc = subprocess.Popen(['samtools', 'mpileup',*arg],stdout=subprocess.PIPE)
-ccc=0
-muts=0
-thetas=0
-thetavrs=0
-pis=0
-times=[]
-timesums=[]
-N=10**6
-for i in range(2, sum(ii[-4:]=='.bam' for ii in sys.argv) + 1):
-    times.append(ra.geometric(1 - (4*N-i*(i-1))/(4*N), size=200000))
-while True:
+        accurate=True
+    if '--pi' in sys.argv :
+        if sys.argv[sys.argv.index('--pi')+1].isdigit():
+            strt+=1
+            wpi=int(sys.argv[sys.argv.index('--pi')+1])
 
-    tns=0
-    stats = proc.stdout.readline()
-    if not stats:
-        break
-    stats=stats.split(b'\t')
-    phreds=[[1-10**(-0.1*(i-33)) for i in stats[j]] for j in range(5,len(stats),3)]
-    nucleotides=stats[4::3]#4::3
+        strt+=1
+        pi=True
 
-    # print(stats)
-    phs=[{b'a':[],b"g":[],b'c':[],b't':[]} for i in range(len(nucleotides))]
-    ns=[{b'a':0,b"g":0,b'c':0} for i in range(len(nucleotides))]
-    skip=0
-    number=b''
-    if window:
-        ncld=b''
-        sampsz=0
-        ccc += 1
     if wpi or windowD:
-        cpi+=1
-        pidata.append([phs])
-    for i in range (len(nucleotides)):
-        counter=0
+        pidata=[]
+    if '--theta' in sys.argv:
+        window=int(sys.argv[sys.argv.index('--theta')+1])
+        # step=int(sys.argv[sys.argv.index('--theta')+2])
+        strt += 2
+    if '--D' in sys.argv:
+        windowD=int(sys.argv[sys.argv.index('--D')+1])
+        # step=int(sys.argv[sys.argv.index('--theta')+2])
+        strt += 2
+    if not pi+window or '--freq' in sys.argv:
+        if '--freq' in sys.argv:
+            strt += 1
+        ff=True
+    arg=sys.argv[strt:]
+    proc = subprocess.Popen(['samtools', 'mpileup',*arg],stdout=subprocess.PIPE)
+    ccc=0
+    muts=0
+    thetas=0
+    thetavrs=0
+    pis=0
+    times=[]
+    timesums=[]
+    N=10**6
+    for i in range(2, sum(ii[-4:]=='.bam' for ii in sys.argv) + 1):
+        times.append(ra.geometric(1 - (4*N-i*(i-1))/(4*N), size=200000))
+    while True:
+
+        tns=0
+        stats = proc.stdout.readline()
+        if not stats:
+            break
+        stats=stats.split(b'\t')
+        phreds=[[1-10**(-0.1*(i-33)) for i in stats[j]] for j in range(5,len(stats),3)]
+        nucleotides=stats[4::3]#4::3
+
+        # print(stats)
+        phs=[{b'a':[],b"g":[],b'c':[],b't':[]} for i in range(len(nucleotides))]
+        ns=[{b'a':0,b"g":0,b'c':0} for i in range(len(nucleotides))]
+        skip=0
+        number=b''
         if window:
-            two=0
-        for nuc in np.frombuffer(nucleotides[i].lower(),dtype='S1'):#np.frombuffer so that nuc is b'' instead of int
+            ncld=b''
+            sampsz=0
+            ccc += 1
+        if wpi or windowD or tlsize:
+            cpi+=1
+            pidata.append([phs])
+        for i in range (len(nucleotides)):
+            counter=0
+            # if window:
+            #     two=0
+            for nuc in np.frombuffer(nucleotides[i].lower(),dtype='S1'):#np.frombuffer so that nuc is b'' instead of int
 
-            if skip!=0:
-                skip-=1
-                continue
-            if number !=b'' and nuc.isalpha():
-                skip=int(number)-1
-                number=b''
-            elif nuc.isdigit():
-                if number==b'':
-                    print('!!!!',b'\t'.join(stats))
-                    exit()
-                number+=nuc
-            elif nuc==b'^':
-                skip=1
+                if skip!=0:
+                    skip-=1
+                    continue
+                if number !=b'' and nuc.isalpha():
+                    skip=int(number)-1
+                    number=b''
+                elif nuc.isdigit():
+                    if number==b'':
+                        print('!!!!',b'\t'.join(stats))
+                        exit()
+                    number+=nuc
+                elif nuc==b'^':
+                    skip=1
 
-            elif nuc== b'+' or nuc==b'-':
-                number+=b'0'
-            elif nuc== b't':
-                # tns+=1
-                if window and ncld == b'':
-                    ncld = nuc
-                elif window and ncld!=nuc:
-                    two=1
-                phs[i][nuc].append(phreds[i][counter])
-                counter+=1
-            elif nuc.isalpha():
-                if window and ncld == b'':
-                    ncld = nuc
-                elif window and ncld != nuc:
-                    two = 1
-                ns[i][nuc]+=1
-                phs[i][nuc].append(phreds[i][counter])
-                counter+=1
-        if window:
-            if two:
-                sampsz+=2
-            else:
-                sampsz+=2-2**-(len(phreds[i])-1)
+                elif nuc== b'+' or nuc==b'-':
+                    number+=b'0'
+                elif nuc== b't':
+                    # tns+=1
+                    if window and ncld == b'':
+                        ncld = nuc
+                    # elif window and ncld!=nuc:
+                    #     two=1
+                    phs[i][nuc].append(phreds[i][counter])
+                    counter+=1
+                elif nuc.isalpha():
+                    if window and ncld == b'':
+                        ncld = nuc
+                    # elif window and ncld != nuc:
+                    #     two = 1
+                    ns[i][nuc]+=1
+                    phs[i][nuc].append(phreds[i][counter])
+                    counter+=1
+            # if window:
+            #     if two:
+            #         sampsz+=2
+            #     else:
+            #         sampsz+=2-2**-(len(phreds[i])-1)
 
-    # phreds=[phreds[j] for j in phs[b"a"]]+[phreds[j] for j in phs[b'g']]+[phreds[j] for j in phs[b"c"]]+[phreds[j] for j in phs[b't']]
-    # phs={key:[phreds[j] for j in phs[key]] for key in phs}
+        # phreds=[phreds[j] for j in phs[b"a"]]+[phreds[j] for j in phs[b'g']]+[phreds[j] for j in phs[b"c"]]+[phreds[j] for j in phs[b't']]
+        # phs={key:[phreds[j] for j in phs[key]] for key in phs}
 
-    # afrec=op.minimize_scalar(loglikelihood,args=(ns[b"a"],phreds),bounds=[0,1], method='Bounded')['x']    #
-    # print ("A:", afrecs)
-    # if counter==0:
-    #     continue
+        # afrec=op.minimize_scalar(loglikelihood,args=(ns[b"a"],phreds),bounds=[0,1], method='Bounded')['x']    #
+        # print ("A:", afrecs)
+        # if counter==0:
+        #     continue
 
-    # allfrec=op.minimize(loglhoodDiploid,[0.25,0.25,0.25],args=list(phs[-1].values()),bounds=[[0,1]], constraints=op.LinearConstraint(np.diag([1,1,1]),0,1))
-    # print(' '.join(str(i).upper() for i in zip(ns[-1].keys(), allfrec['x'])))
-    x,y=sorted( phs[0].keys(), key=lambda x:sum(len(phs[i][x]) for i in range(len(ns))) )[-2:]
+        # allfrec=op.minimize(loglhoodDiploid,[0.25,0.25,0.25],args=list(phs[-1].values()),bounds=[[0,1]], constraints=op.LinearConstraint(np.diag([1,1,1]),0,1))
+        # print(' '.join(str(i).upper() for i in zip(ns[-1].keys(), allfrec['x'])))
+        x,y=sorted( phs[0].keys(), key=lambda x:sum(len(phs[i][x]) for i in range(len(ns))) )[-2:]
 
 
-    if window and round(sampsz)>1:
-        tmp=theta(phs)
-        thetas+= tmp#[0]
-        #thetavrs+=tmp[1]
-    if window and ccc == window:
-        print("theta:", thetas)#/thetavrs*window)
-        ccc=0
-        thetas=0
-        thetavrs=0
-    if ff:
-        print('frequency:', op.minimize_scalar(lhoodDiploidB, args=(y, x, phs), bounds=[0, 1])['x'], str(y + b'(' + x + b')'))
-    if windowD:
-        if not wpi:
-            pidata[-1].append(meanfrqs(phs))
-        if windowD==cpi:
-            # hmc=np.mean(hrm(phs,ps) for phs,ps in pidata)
-            muts=np.array(mutprob(phs,ps) for phs,ps in pidata)
-            #muts=sum(1/(1-muts))/sum(1/(muts*(1-muts)))*window
-            var=np.mean(Dp(phs,ps,muts)for phs,ps in pidata)
-            if accurate:
-                Dpr=(np.sum(PAvg(phs,ps,c=pidata) for phs,ps in pidata)*window/muts-1/harmonic(2*len(phs)-1))/var
-            else:
-                Dpr=(np.sum(PAvg(phs, p) for phs, p in pidata)/muts-1/harmonic(2*len(phs)-1))/var
-            print("D':",Dpr)
-    if pi:
-        if wpi  :
-            pis+=1
-
-            pidata[-1].append(meanfrqs(phs))
-            if cpi==wpi:
-                if not accurate:
-                    print(np.mean(PAvg(phs,ps) for phs,ps in pidata))#'nucleotide diversity:'
-                if accurate:
-                    print(np.sum(PAvg(phs,ps,c=pidata) for phs,ps in pidata))#'nucleotide diversity:'
-                pis=0
+        if window :#and round(sampsz)>1:
+            if tlsize and ccc==window:
+                thetas=sum(pool.map(theta,sum([],pidata)))
                 pidata=[]
-        else:
-            print('nucleotide diversity:',op.minimize_scalar(loglhoodPiDiploidB,args=(phs),bounds=[0,0.5])['x'])
+            elif not tlsize:
+                tmp=theta(phs)
+                thetas+= tmp#[0]
+            #thetavrs+=tmp[1]
+        if window and ccc == window:#"theta:",
+            print( thetas)#/thetavrs*window)
+            ccc=0
+            thetas=0
+            thetavrs=0
+        if ff:
+            print( op.minimize_scalar(lhoodDiploidB, args=(y, x, phs), bounds=[0, 1])['x'], str(y + b'(' + x + b')'))#'frequency:',
+        if windowD:#"D':"
+            if not wpi:
+                pidata[-1].append(meanfrqs(phs))
+            if windowD==cpi:
+                if tlsize:
+                    muts=np.array(pool.starmap(mutprob,pidata))
+                    var=pool.starmap(lambda phs,ps:Dp(phs,ps,muts),pidata)
+                else:
+                    # hmc=np.mean(hrm(phs,ps) for phs,ps in pidata)
+                    muts=np.array(mutprob(phs,ps) for phs,ps in pidata)
+                    #muts=sum(1/(1-muts))/sum(1/(muts*(1-muts)))*window
+                    var=np.mean(Dp(phs,ps,muts)for phs,ps in pidata)
+                if accurate:
+                    Dpr=(np.sum(PAvg(phs,ps,c=pidata) for phs,ps in pidata)*window/muts-1/harmonic(2*len(phs)-1))/var
+                else:
+                    if tlsize:
+                        Dpr = (np.sum(pool.starmap(PAvg,  pidata)) / muts - 1 / harmonic(2 * len(phs) - 1)) / var
+                    else:
+                        Dpr=(np.sum(PAvg(phs, p) for phs, p in pidata)/muts-1/harmonic(2*len(phs)-1))/var
+                print(Dpr)
+                cpi=0
+                pidata=[]
+        if pi:
+            if wpi  :
+                pis+=1
+
+                pidata[-1].append(meanfrqs(phs))
+                if cpi==wpi:
+                    if not accurate:
+                        if  tlsize:
+                            print(np.mean(pool.starmap(phs , pidata)))#'nucleotide diversity:'
+                        else:
+                            print(np.mean(PAvg(phs, ps) for phs, ps in pidata))
+                    elif tlsize:
+                        print(np.sum(pool.starmap(lambda phs,ps: PAvg(phs, ps, c=pidata) , pidata)))
+                    else:
+                        print(np.sum(PAvg(phs,ps,c=pidata) for phs,ps in pidata))#'nucleotide diversity:'
+                    cpi=0
+                    pidata=[]
+            else:#'nucleotide diversity:',
+                if not tlsize:
+                    print(op.minimize_scalar(loglhoodPiDiploidB,args=(phs),bounds=[0,0.5])['x'])
+                elif tlsize==cpi:
+                    vls=pool.starmap(lambda x:op.minimize_scalar(loglhoodPiDiploidB,args=(x),bounds=[0,0.5])['x'],pidata)
+                    for vl in vls: print(vl)
+                    pidata,cpi=[],0
+
+        if tlsize==cpi:
+            tlsize=0
+
+    if pi and not wpi and cpi!=0:
+  # residual'nucleotide diversity:',
+        vls = pool.starmap(lambda x: op.minimize_scalar(loglhoodPiDiploidB, args=(x), bounds=[0, 0.5])['x'],
+                           pidata)
+        for vl in vls: print(vl)
+        pidata, cpi = [], 0
+
