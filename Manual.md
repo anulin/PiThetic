@@ -1,3 +1,7 @@
+layout: page
+title: "Manual"
+permalink: /manual
+
 ### Manual
 ## Requirements
 The tool is using [samtools](https://www.htslib.org/) 
