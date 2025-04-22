@@ -64,7 +64,7 @@ def meanfrqs(phs):
     for x, y in combinations({b'a', b't', b'c', b'g'}, 2):
         if mean(1e-10,phs, x, y)>0 and mean(1-1e-10,phs, x, y)>0 :
             p=1
-        elif mean(1e-10,phs, x, y)*mean(1-1e-10,phs, x, y):
+        elif mean(1e-10,phs, x, y)*mean(1-1e-10,phs, x, y)<0:
             p=op.root_scalar( mean, args=(phs, x, y), bracket=[0,1]).root
         else:
             p=0
@@ -138,7 +138,7 @@ def theta(phs):
         c,d={b'a',b't',b'c',b'g'}-{x, y}
         if mean(1e-10,phs, x, y)>0 and mean(1-1e-10,phs, x, y)>0 :
             p=1
-        elif mean(1e-10,phs, x, y)*mean(1-1e-10,phs, x, y):
+        elif mean(1e-10,phs, x, y)*mean(1-1e-10,phs, x, y)<0:
             p=op.root_scalar( mean, args=(phs, x, y), bracket=[0,1]).root
         else:
             p=0
