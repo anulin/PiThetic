@@ -143,14 +143,14 @@ def theta(phs):
         p11=np.array([p**2* np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]])/
                      ( p**2*np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
                        p*(1-p)*2 *np.prod([(1+2*pr)/6 for pr in ph[x]+ph[y]]+[(1-pr)/3 for pr in ph[d]+ph[c]]) +
-                       (1-p)**2*np.prod([(1-pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])) for ph in phs])
+                       (1-p)**2*np.prod([(1-pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])) for ph in phs if len(ph)!=0])
         p00=np.array([(1-p)**2*np.prod([(1-pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])/
                      ( p**2*np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
                        p*(1-p)*2 *np.prod([(1+2*pr)/6 for pr in ph[x]+ph[y]]+[(1-pr)/3 for pr in ph[d]+ph[c]]) +
-                       (1-p)**2*np.prod([(1-pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])) for ph in phs])
+                       (1-p)**2*np.prod([(1-pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])) for ph in phs  if len(ph)!=0])
         prs.append(np.prod([p ** 2 * np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
                            p * (1 - p) * 2 * np.prod([(1 + 2 * pr) / 6 for pr in ph[x] + ph[y]] + [(1 - pr) / 3 for pr in ph[d] + ph[c]]) +
-                           (1 - p) ** 2 * np.prod([(1 - pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y]) for ph in phs]))
+                           (1 - p) ** 2 * np.prod([(1 - pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y]) for ph in phs  if len(ph)!=0]))
 
         vals.append((1-np.prod(p11)-np.prod(p00))/harmonic(2*len(phs)-1))
         sqrs.append(vals[-1]/harmonic(2*len(phs)-1))
@@ -184,8 +184,9 @@ def mutprob(phs,ps):
 
 def loglhoodDiploid(p,   ph):
     return -np.prod([ sum(hmzglik(i,p,ph)for i in range(4))+2*sum(htrzglik(a,b,p,ph) for a,b in combinations(range(4),2))])
-def loglhoodPiDiploidB(p, phs):
-    return sum(lhoodDiploidB(p, x, y, phs) + lhoodDiploidB(p, y, x, phs) for x, y in combinations({b'a', b't', b'c', b'g'}, 2))
+def loglhoodPiDiploidB( phs):
+    func=lambda p: sum(lhoodDiploidB(p, x, y, phs) + lhoodDiploidB(p, y, x, phs) for x, y in combinations({b'a', b't', b'c', b'g'}, 2))
+    return op.minimize_scalar(func,bounds=[0,0.5])['x']
     # return loglhoodDiploidB(p, x, y, phs)+loglhoodDiploidB(p, y, x, phs)
     # return -np.prod([ p**2*np.prod(ph[0])*np.prod([(1-pr)/3 for pr in ph[1]])+2*p*(1-p)*htrzglik(0,1,p,ph)+
     #                      (1-p)**2*np.prod([(1-pr)/3 for pr in ph[0]])*np.prod( ph[1])])
@@ -309,7 +310,7 @@ if __name__ == '__main__':
         strt+=1
         pi=True
 
-    if wpi or windowD:
+    if wpi or windowD or tlsize:
         pidata=[]
     if '--theta' in sys.argv:
         window=int(sys.argv[sys.argv.index('--theta')+1])
@@ -337,15 +338,14 @@ if __name__ == '__main__':
         times.append(ra.geometric(1 - (4*N-i*(i-1))/(4*N), size=200000))
     while True:
 
-        tns=0
+        reads=0
         stats = proc.stdout.readline()
         if not stats:
             break
         stats=stats.split(b'\t')
         phreds=[[1-10**(-0.1*(i-33)) for i in stats[j]] for j in range(5,len(stats),3)]
         nucleotides=stats[4::3]#4::3
-
-        # print(stats)
+        # print(stats[4::3])
         phs=[{b'a':[],b"g":[],b'c':[],b't':[]} for i in range(len(nucleotides))]
         ns=[{b'a':0,b"g":0,b'c':0} for i in range(len(nucleotides))]
         skip=0
@@ -354,9 +354,6 @@ if __name__ == '__main__':
             ncld=b''
             sampsz=0
             ccc += 1
-        if wpi or windowD or tlsize:
-            cpi+=1
-            pidata.append([phs])
         for i in range (len(nucleotides)):
             counter=0
             # if window:
@@ -395,12 +392,17 @@ if __name__ == '__main__':
                     ns[i][nuc]+=1
                     phs[i][nuc].append(phreds[i][counter])
                     counter+=1
+            reads+=counter
             # if window:
             #     if two:
             #         sampsz+=2
             #     else:
             #         sampsz+=2-2**-(len(phreds[i])-1)
 
+        if wpi or windowD or tlsize:
+            cpi+=1
+            if reads>1:
+                pidata.append([phs])
         # phreds=[phreds[j] for j in phs[b"a"]]+[phreds[j] for j in phs[b'g']]+[phreds[j] for j in phs[b"c"]]+[phreds[j] for j in phs[b't']]
         # phs={key:[phreds[j] for j in phs[key]] for key in phs}
 
@@ -418,12 +420,12 @@ if __name__ == '__main__':
             if tlsize and ccc==window:
                 thetas=sum(pool.map(theta,sum([],pidata)))
                 pidata=[]
-            elif not tlsize:
+            elif not tlsize and reads>1:
                 tmp=theta(phs)
                 thetas+= tmp#[0]
             #thetavrs+=tmp[1]
         if window and ccc == window:#"theta:",
-            print( thetas)#/thetavrs*window)
+            print( thetas,reads)#/thetavrs*window)
             ccc=0
             thetas=0
             thetavrs=0
@@ -470,9 +472,9 @@ if __name__ == '__main__':
                     pidata=[]
             else:#'nucleotide diversity:',
                 if not tlsize:
-                    print(op.minimize_scalar(loglhoodPiDiploidB,args=(phs),bounds=[0,0.5])['x'])
+                    print(loglhoodPiDiploidB(phs))
                 elif tlsize==cpi:
-                    vls=pool.starmap(lambda x:op.minimize_scalar(loglhoodPiDiploidB,args=(x),bounds=[0,0.5])['x'],pidata)
+                    vls=pool.starmap(loglhoodPiDiploidB, pidata)
                     for vl in vls: print(vl)
                     pidata,cpi=[],0
 
@@ -481,8 +483,7 @@ if __name__ == '__main__':
 
     if pi and not wpi and cpi!=0:
   # residual'nucleotide diversity:',
-        vls = pool.starmap(lambda x: op.minimize_scalar(loglhoodPiDiploidB, args=(x), bounds=[0, 0.5])['x'],
-                           pidata)
+        vls = pool.starmap(loglhoodPiDiploidB,pidata)
         for vl in vls: print(vl)
         pidata, cpi = [], 0
 
