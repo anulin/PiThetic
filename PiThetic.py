@@ -65,7 +65,7 @@ def meanfrqs(phs):
         if mean(1e-10,phs, x, y)>0 and mean(1-1e-10,phs, x, y)>0 :
             p=1
         elif mean(1e-10,phs, x, y)*mean(1-1e-10,phs, x, y)<0:
-            p=op.root_scalar( mean, args=(phs, x, y), bracket=[0,1]).root
+            p=op.root_scalar( mean, args=(phs, x, y), bracket=[1e-10,1-1e-10]).root
         else:
             p=0
         vals.append(p)
@@ -73,7 +73,7 @@ def meanfrqs(phs):
 def allelprb(ps,phs):
     prs = []
     for i in range(len(ps)):
-        x, y=combinations({b'a', b't', b'c', b'g'}, 2)[i]
+        x, y=list(combinations({b'a', b't', b'c', b'g'}, 2))[i]
         c, d = {b'a', b't', b'c', b'g'} - {x, y}
         p=ps[i]
         prs.append(np.prod([p ** 2 * np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
@@ -84,7 +84,7 @@ def hrm(phs,ps):
     prs = []
     vals = []
     for i in range(len(ps)):
-        x, y = combinations({b'a', b't', b'c', b'g'}, 2)[i]
+        x, y = list(combinations({b'a', b't', b'c', b'g'}, 2))[i]
         c, d = {b'a', b't', b'c', b'g'} - {x, y}
         p = ps[i]
         p11 = np.array([p * 2 * np.prod(ph[x] / 2) * np.prod([(1 - pr) / 6 for pr in ph[y] + ph[c] + ph[d]]) /
@@ -109,18 +109,20 @@ def hrm(phs,ps):
 def Dp(phs,ps, muts):
     prs=[]
     vals=[]
+
     for i in range(len(ps)):
-        x, y = combinations({b'a', b't', b'c', b'g'}, 2)[i]
+        x, y = list(combinations({b'a', b't', b'c', b'g'}, 2))[i]
         c, d = {b'a', b't', b'c', b'g'} - {x, y}
         p = ps[i]
-        p11=np.array([p*2* np.prod(ph[x]/2) * np.prod([(1 - pr) / 6 for pr in ph[y] + ph[c] + ph[d]])/
-                     ( p**2*np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
-                       p*(1-p)*2 *np.prod([(1+2*pr)/6 for pr in ph[x]+ph[y]]+[(1-pr)/3 for pr in ph[d]+ph[c]]) +
-                       (1-p)**2*np.prod([(1-pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])) for ph in phs])
-        p00=np.array([(1-p)*2*np.prod([(1-pr) / 6 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y]/2)/
-                     ( p**2*np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
-                       p*(1-p)*2 *np.prod([(1+2*pr)/6 for pr in ph[x]+ph[y]]+[(1-pr)/3 for pr in ph[d]+ph[c]]) +
-                       (1-p)**2*np.prod([(1-pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])) for ph in phs])
+
+        # p11=np.array([p*2* np.prod(ph[x]/2) * np.prod([(1 - pr) / 6 for pr in ph[y] + ph[c] + ph[d]])/
+        #              ( p**2*np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
+        #                p*(1-p)*2 *np.prod([(1+2*pr)/6 for pr in ph[x]+ph[y]]+[(1-pr)/3 for pr in ph[d]+ph[c]]) +
+        #                (1-p)**2*np.prod([(1-pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])) for ph in phs])
+        # p00=np.array([(1-p)*2*np.prod([(1-pr) / 6 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y]/2)/
+        #              ( p**2*np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
+        #                p*(1-p)*2 *np.prod([(1+2*pr)/6 for pr in ph[x]+ph[y]]+[(1-pr)/3 for pr in ph[d]+ph[c]]) +
+        #                (1-p)**2*np.prod([(1-pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])) for ph in phs])
         prs.append(np.prod([p ** 2 * np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
                            p * (1 - p) * 2 * np.prod([(1 + 2 * pr) / 6 for pr in ph[x] + ph[y]] + [(1 - pr) / 3 for pr in ph[d] + ph[c]]) +
                            (1 - p) ** 2 * np.prod([(1 - pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y]) for ph in phs]))
@@ -172,7 +174,7 @@ def mutprob(phs,ps):
     prs=[]
     vals=[]
     for i in range(len(ps)):
-        x, y = combinations({b'a', b't', b'c', b'g'}, 2)[i]
+        x, y = list(combinations({b'a', b't', b'c', b'g'}, 2))[i]
         c, d = {b'a', b't', b'c', b'g'} - {x, y}
         p = ps[i]
 
@@ -206,7 +208,7 @@ def PAvg(phs,ps, **kwargs):
     vals=[]
     pidata = kwargs.get('c')
     for i in range(len(ps)):
-        x, y = combinations({b'a', b't', b'c', b'g'}, 2)[i]
+        x, y = list(combinations({b'a', b't', b'c', b'g'}, 2))[i]
         c, d = {b'a', b't', b'c', b'g'} - {x, y}
         p = ps[i]
 
@@ -214,7 +216,7 @@ def PAvg(phs,ps, **kwargs):
                      ( p**2*np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
                        p*(1-p)*2 *np.prod([(1+2*pr)/6 for pr in ph[x]+ph[y]]+[(1-pr)/3 for pr in ph[d]+ph[c]]) +
                        (1-p)**2*np.prod([(1-pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])) for ph in phs])
-        p12=np.array( [2 *np.prod([(1+2*pr)/6 for pr in ph[x]+ph[y]]+[(1-pr)/3 for pr in ph[d]+ph[c]])/
+        p12=np.array( [2 *p*(1-p)*np.prod([(1+2*pr)/6 for pr in ph[x]+ph[y]]+[(1-pr)/3 for pr in ph[d]+ph[c]])/
                       (p ** 2 * np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
                        p * (1 - p) * 2 * np.prod([(1 + 2 * pr) / 6 for pr in ph[x] + ph[y]] + [(1 - pr) / 3 for pr in ph[d] + ph[c]]) +
                        (1 - p) ** 2 * np.prod([(1 - pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])) for ph in phs])
@@ -227,6 +229,7 @@ def PAvg(phs,ps, **kwargs):
         # p_3=p_2*sum(X)-2*X**2*(sum(X)-X)-2*p11*X#..
         # p_4=p_2**2+2*(sum(X**2)**2-sum(X**4))-4*sum((X*(sum(X)-X))**2) -sum((2*p11)**2)-sum(X*(sum(X)-X)*8*p11)
         # Vr_pi=p_2-2*p_3+p_4-(sum(X)-p_2)**2
+
         vals.append((sum(X)/2/len(p11)-p_2/2/len(p11)/(2*len(p11)-1)))
     if pidata==None:
         return np.dot(prs,vals)/sum(prs)
@@ -320,9 +323,6 @@ if __name__ == '__main__':
 
         strt+=1
         pi=True
-
-    if wpi or windowD or tlsize:
-        pidata=[]
     if '--theta' in sys.argv:
         window=int(sys.argv[sys.argv.index('--theta')+1])
         # step=int(sys.argv[sys.argv.index('--theta')+2])
@@ -331,10 +331,12 @@ if __name__ == '__main__':
         windowD=int(sys.argv[sys.argv.index('--D')+1])
         # step=int(sys.argv[sys.argv.index('--theta')+2])
         strt += 2
-    if not pi+window or '--freq' in sys.argv:
+    if not pi+window+windowD or '--freq' in sys.argv:
         if '--freq' in sys.argv:
             strt += 1
         ff=True
+    if wpi or windowD or tlsize:
+        pidata=[]
     arg=sys.argv[strt:]
     proc = subprocess.Popen(['samtools', 'mpileup',*arg],stdout=subprocess.PIPE)
     ccc=0
@@ -435,7 +437,7 @@ if __name__ == '__main__':
                 tmp=theta(phs)
                 thetas+= tmp#[0]
             #thetavrs+=tmp[1]
-        # if int(stats[1]) > 415:
+        # if int(stats[1]) >   b'23203': seem to be 0 reads
         #     print(nucleotides)
         if window and ccc == window:#"theta:",
             print( thetas)#/thetavrs*window)
@@ -445,29 +447,36 @@ if __name__ == '__main__':
         if ff:
             print( op.minimize_scalar(lhoodDiploidB, args=(y, x, phs), bounds=[0, 1])['x'], str(y + b'(' + x + b')'))#'frequency:',
         if windowD:#"D':"
-            if not wpi:
+            if not wpi and reads>1:
                 pidata[-1].append(meanfrqs(phs))
             if windowD==cpi:
                 if tlsize:
-                    muts=np.array(pool.starmap(mutprob,pidata))
-                    var=pool.starmap(lambda phs,ps:Dp(phs,ps,muts),pidata)
+                    muts=np.sum(pool.starmap(mutprob,pidata))
+                    if muts != 0:
+                        var=pool.starmap(lambda phs,ps:Dp(phs,ps,muts),pidata)
                 else:
-                    # hmc=np.mean(hrm(phs,ps) for phs,ps in pidata)
-                    muts=np.array(mutprob(phs,ps) for phs,ps in pidata)
+                    # hmc=np.mean([hrm(phs,ps) for phs,ps in pidata])
+                    muts=np.sum([mutprob(phs,ps) for phs,ps in pidata])
                     #muts=sum(1/(1-muts))/sum(1/(muts*(1-muts)))*window
-                    var=np.mean(Dp(phs,ps,muts)for phs,ps in pidata)
+                    if muts!=0:
+                        var=np.mean([Dp(phs,ps,muts)for phs,ps in pidata])
+                if muts == 0:
+                    print("no_mutations")
+                    cpi = 0
+                    pidata = []
+                    continue
                 if accurate:
-                    Dpr=(np.sum(PAvg(phs,ps,c=pidata) for phs,ps in pidata)*window/muts-1/harmonic(2*len(phs)-1))/var
+                    Dpr=(sum(PAvg(phs,ps,c=pidata) for phs,ps in pidata)*window/muts-1/harmonic(2*len(phs)-1))/var
                 else:
                     if tlsize:
                         Dpr = (np.sum(pool.starmap(PAvg,  pidata)) / muts - 1 / harmonic(2 * len(phs) - 1)) / var
                     else:
-                        Dpr=(np.sum(PAvg(phs, p) for phs, p in pidata)/muts-1/harmonic(2*len(phs)-1))/var
+                        Dpr=(sum(PAvg(phs, p) for phs, p in pidata)/muts-1/harmonic(2*len(phs)-1))/var
                 print(Dpr)
                 cpi=0
                 pidata=[]
         if pi:
-            if wpi  :
+            if wpi  and reads>1:
                 pis+=1
 
                 pidata[-1].append(meanfrqs(phs))
@@ -476,14 +485,14 @@ if __name__ == '__main__':
                         if  tlsize:
                             print(np.mean(pool.starmap(phs , pidata)))#'nucleotide diversity:'
                         else:
-                            print(np.mean(PAvg(phs, ps) for phs, ps in pidata))
+                            print(np.mean([PAvg(phs, ps) for phs, ps in pidata]))
                     elif tlsize:
                         print(np.sum(pool.starmap(lambda phs,ps: PAvg(phs, ps, c=pidata) , pidata)))
                     else:
-                        print(np.sum(PAvg(phs,ps,c=pidata) for phs,ps in pidata))#'nucleotide diversity:'
+                        print(sum(PAvg(phs,ps,c=pidata) for phs,ps in pidata))#'nucleotide diversity:'
                     cpi=0
                     pidata=[]
-            else:#'nucleotide diversity:',
+            elif not wpi:#'nucleotide diversity:',
                 if not tlsize:
                     print(loglhoodPiDiploidB(phs))
                 elif tlsize==cpi:
