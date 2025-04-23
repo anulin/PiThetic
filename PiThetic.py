@@ -8,7 +8,7 @@ import scipy.optimize as op
 from numpy import random as ra
 from scipy.special import digamma, polygamma
 from scipy.stats import poisson
-
+import matplotlib.pyplot as plt
 # from os import environ
 # print(environ['OMP_NUM_THREADS'] )
 
@@ -52,13 +52,13 @@ def mean(p,phs,x,y):
                  ( p**2*np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
                    p*(1-p)*2 *np.prod([(1+2*pr)/6 for pr in ph[x]+ph[y]]+[(1-pr)/3 for pr in ph[d]+ph[c]]) +
                    (1-p)**2*np.prod([(1-pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])) for ph in phs])
-    p12=np.array([ 2 *np.prod([(1+2*pr)/6 for pr in ph[x]+ph[y]]+[(1-pr)/3 for pr in ph[d]+ph[c]])/
+    p12=np.array([ p * (1 - p) *2 *np.prod([(1+2*pr)/6 for pr in ph[x]+ph[y]]+[(1-pr)/3 for pr in ph[d]+ph[c]])/
                   (p ** 2 * np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
                    p * (1 - p) * 2 * np.prod([(1 + 2 * pr) / 6 for pr in ph[x] + ph[y]] + [(1 - pr) / 3 for pr in ph[d] + ph[c]]) +
                    (1 - p) ** 2 * np.prod([(1 - pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])) for ph in phs])
 
 
-    return sum(2*p11+p12)-p
+    return sum(2*p11+p12)/2/len(phs)-p
 def meanfrqs(phs):
     vals=[]
     for x, y in combinations({b'a', b't', b'c', b'g'}, 2):
@@ -139,7 +139,7 @@ def theta(phs):
         if mean(1e-10,phs, x, y)>0 and mean(1-1e-10,phs, x, y)>0 :
             p=1
         elif mean(1e-10,phs, x, y)*mean(1-1e-10,phs, x, y)<0:
-            p=op.root_scalar( mean, args=(phs, x, y), bracket=[0,1]).root
+            p=op.root_scalar( mean, args=(phs, x, y), bracket=[1e-10,1-1e-10]).root
         else:
             p=0
         # p11=np.array(p*2* np.prod(ph[x]/2) * np.prod([(1 - pr) / 6 for pr in ph[y] + ph[c] + ph[d]])/
@@ -154,18 +154,18 @@ def theta(phs):
         p11=np.array([p**2* np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]])/
                      ( p**2*np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
                        p*(1-p)*2 *np.prod([(1+2*pr)/6 for pr in ph[x]+ph[y]]+[(1-pr)/3 for pr in ph[d]+ph[c]]) +
-                       (1-p)**2*np.prod([(1-pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])) for ph in phs if len(ph)!=0])
+                       (1-p)**2*np.prod([(1-pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])) for ph in phs ])
         p00=np.array([(1-p)**2*np.prod([(1-pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])/
                      ( p**2*np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
                        p*(1-p)*2 *np.prod([(1+2*pr)/6 for pr in ph[x]+ph[y]]+[(1-pr)/3 for pr in ph[d]+ph[c]]) +
-                       (1-p)**2*np.prod([(1-pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])) for ph in phs  if len(ph)!=0])
+                       (1-p)**2*np.prod([(1-pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y])) for ph in phs  ])
         prs.append(np.prod([p ** 2 * np.prod(ph[x]) * np.prod([(1 - pr) / 3 for pr in ph[y] + ph[c] + ph[d]]) +
                            p * (1 - p) * 2 * np.prod([(1 + 2 * pr) / 6 for pr in ph[x] + ph[y]] + [(1 - pr) / 3 for pr in ph[d] + ph[c]]) +
-                           (1 - p) ** 2 * np.prod([(1 - pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y]) for ph in phs  if len(ph)!=0]))
-
+                           (1 - p) ** 2 * np.prod([(1 - pr) / 3 for pr in ph[x] + ph[c] + ph[d]]) * np.prod(ph[y]) for ph in phs  ]))
         vals.append((1-np.prod(p11)-np.prod(p00))/harmonic(2*len(phs)-1))
         sqrs.append(vals[-1]/harmonic(2*len(phs)-1))
     avg=np.dot(prs,vals)/sum(prs)
+
     avgsq=np.dot(prs,sqrs)/sum(prs)
     return avg#/(avgsq-avg**2),1/(avgsq-avg**2)
 def mutprob(phs,ps):
@@ -427,7 +427,7 @@ if __name__ == '__main__':
         x,y=sorted( phs[0].keys(), key=lambda x:sum(len(phs[i][x]) for i in range(len(ns))) )[-2:]
 
 
-        if window :#and round(sampsz)>1:
+        if window :
             if tlsize and ccc==window:
                 thetas=sum(pool.map(theta,sum([],pidata)))
                 pidata=[]
@@ -435,8 +435,10 @@ if __name__ == '__main__':
                 tmp=theta(phs)
                 thetas+= tmp#[0]
             #thetavrs+=tmp[1]
+        # if int(stats[1]) > 415:
+        #     print(nucleotides)
         if window and ccc == window:#"theta:",
-            print( thetas,reads)#/thetavrs*window)
+            print( thetas)#/thetavrs*window)
             ccc=0
             thetas=0
             thetavrs=0
