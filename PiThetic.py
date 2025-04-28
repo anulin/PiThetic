@@ -305,6 +305,7 @@ if __name__ == '__main__':
     strt=1#data start column
     cpi=0
     wpi=0
+    positions=[]
     accurate=False
     if  '--t' in sys.argv :
         strt += 2
@@ -334,12 +335,11 @@ if __name__ == '__main__':
         if '--freq' in sys.argv:
             strt += 1
         ff=True
-    if wpi or windowD or tlsize:
-        pidata=[]
     arg=sys.argv[strt:]
     proc = subprocess.Popen(['samtools', 'mpileup',*arg],stdout=subprocess.PIPE)
     ccc=0
     muts=0
+    chr=0
     thetas=0
     thetavrs=0
     pis=0
@@ -363,7 +363,7 @@ if __name__ == '__main__':
         number=b''
         if window:
             ncld=b''
-            sampsz=0
+            #sampsz=0
             ccc += 1
         for i in range (len(nucleotides)):
             counter=0
@@ -410,9 +410,16 @@ if __name__ == '__main__':
             #         sampsz+=2-2**-(len(phreds[i])-1)
 
         if wpi or windowD or tlsize:
-            cpi+=1
+            if chr!=stats[0]:
+                pidata = []
+                cpi=0
+                ccc=1
+                chr=stats[0]
+            cpi += 1
             if reads>1:
                 pidata.append(phs)
+                if pi and not wpi:
+                    positions.append((stats[0].decode(),stats[1].decode()))
 
         x,y=sorted( phs[0].keys(), key=lambda x:sum(len(phs[i][x]) for i in range(len(ns))) )[-2:]
 
@@ -428,12 +435,13 @@ if __name__ == '__main__':
         # if int(stats[1]) >   b'23203': seem to be 0 reads
         #     print(nucleotides)
         if window and ccc == window:#"theta:",
-            print(stats[0].decode(),str(int(stats[1])-window)+'-'+stats[1].decode(), thetas)#/thetavrs*window)
+
+            print(stats[0].decode(),str(int(stats[1])-ccc)+'-'+stats[1].decode(), thetas)#/thetavrs*window)
             ccc=0
             thetas=0
             thetavrs=0
         if ff:
-            print( op.minimize_scalar(lhoodDiploidB, args=(y, x, phs), bounds=[0, 1])['x'], str(y + b'(' + x + b')'))#'frequency:',
+            print(stats[0].decode(),stats[1].decode(), op.minimize_scalar(lhoodDiploidB, args=(y, x, phs), bounds=[0, 1])['x'], (y + b'(' + x + b')').decode())#'frequency:',
         if windowD:#"D':"
             # if not wpi and reads>1:
             #     pidata[-1].append(meanfrqs(phs))
@@ -466,10 +474,11 @@ if __name__ == '__main__':
                 cpi=0
                 pidata=[]
         if pi:
-            if wpi  and reads>1:
+            if wpi  and cpi==wpi:
                 pis+=1
                 # pidata[-1].append(meanfrqs(phs))
-                if cpi==wpi:
+                if reads>1:
+                    print(stats[0].decode(),str(int(stats[1])-wpi)+'-'+stats[1].decode(),end=' ')
                     if not accurate:
                         if  tlsize:
                             print(np.mean(pool.starmap( PAvg, zip(pidata,pool.map(meanfrqs,pidata)) )) )#'nucleotide diversity:'
@@ -480,21 +489,22 @@ if __name__ == '__main__':
                         print(np.sum(pool.starmap(PAvg , zip(pidata,pool.map(meanfrqs,pidata),(pidata,)*len(pidata)) )))
                     else:
                         print(sum(PAvg(phs,ps,c=pidata) for phs,ps in pidata))#'nucleotide diversity:'
-                    cpi=0
-                    pidata=[]
+                cpi=0
+                pidata=[]
             elif not wpi:#'nucleotide diversity:',
                 if not tlsize:
-                    print(stats[0].decode(),stats[1].decode(),loglhoodPiDiploidB(phs))
+                    if reads>1:
+                        print(stats[0].decode(),stats[1].decode(),loglhoodPiDiploidB(phs))
                 elif tlsize==cpi:
-                    vls=pool.starmap(loglhoodPiDiploidB, pidata)
-                    for vl in vls: print(vl)
-                    pidata,cpi=[],0
+                    vls=pool.map(loglhoodPiDiploidB, pidata)
+                    for vl in range(len(vls)): print(*positions[vl],vls[vl])
+                    pidata,cpi,positions=[],0,[]
 
 
 
     if pi and not wpi and cpi!=0:
   # residual'nucleotide diversity:',
-        vls = pool.starmap(loglhoodPiDiploidB,pidata)
-        for vl in vls: print(vl)
+        vls = pool.map(loglhoodPiDiploidB,pidata)
+        for vl in range(len(vls)): print(*positions[vl],vls[vl])
         pidata, cpi = [], 0
 
