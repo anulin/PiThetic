@@ -203,10 +203,12 @@ def loglhoodPiDiploidB( phs):
     # return loglhoodDiploidB(p, x, y, phs)+loglhoodDiploidB(p, y, x, phs)
     # return -np.prod([ p**2*np.prod(ph[0])*np.prod([(1-pr)/3 for pr in ph[1]])+2*p*(1-p)*htrzglik(0,1,p,ph)+
     #                      (1-p)**2*np.prod([(1-pr)/3 for pr in ph[0]])*np.prod( ph[1])])
-def PAvg(phs,ps, **kwargs):
+
+def PAvg(phs,ps, pidata=None,**kwargs):
     prs=[]
     vals=[]
-    pidata = kwargs.get('c')
+    if pidata==None:
+        pidata = kwargs.get('c')
     for i in range(len(ps)):
         x, y = list(combinations({b'a', b't', b'c', b'g'}, 2))[i]
         c, d = {b'a', b't', b'c', b'g'} - {x, y}
@@ -236,41 +238,45 @@ def PAvg(phs,ps, **kwargs):
     else:
         sp=sum(prs)
         pi=np.dot(prs,vals)/sp
-        return pi/(sigma(phs,ps,prs)/sp-pi**2)/np.sum([1/(sigma(phs2,ps)/sp-pi**2) for phs2,_ in pidata])
+        return pi/(sigma(phs,ps,prs)/sp-pi**2)/np.sum([1/(sigma(phs2,ps,prs)/sp-pi**2) for phs2 in pidata])
 
 def sigma(phs,ps,prs):
     vals=[]
-    #approximate pi variance
-
+    #approximate pi square
     x,y,c,d={b'a', b't', b'c', b'g'}
-    coefs={ph:np.array((1-cf)/cf for cf in ph[x]+ph[y] + ph[c] + ph[d]) for ph in phs}
+    # coefs={ph:np.array([(1-cf)/cf for cf in ph[x]+ph[y] + ph[c] + ph[d]]) for ph in phs}
     #coefsp=1-3/(3+coefs)
-    prd={ph:np.prod(ph[x]+ph[y] + ph[c] + ph[d]) for ph in phs}
-    bprd={ph:np.prod([(1 - pr) / 3 for pr in ph[x]+ph[y] + ph[c] + ph[d]]) for ph in phs}
-    pprd={ph:np.prod([(1 + 2 * pr) / 6 for pr in ph[x]+ph[y] + ph[c] + ph[d]]) for ph in phs}
+    coefs = [np.array([(1 - cf) / cf for cf in ph[x] + ph[y] + ph[c] + ph[d]]) for ph in phs]
+    prd = [np.prod(ph[x] + ph[y] + ph[c] + ph[d]) for ph in phs]
+    bprd = [np.prod([(1 - pr) / 3 for pr in ph[x] + ph[y] + ph[c] + ph[d]]) for ph in phs]
+    pprd = [np.prod([(1 + 2 * pr) / 6 for pr in ph[x] + ph[y] + ph[c] + ph[d]]) for ph in phs]
+
     for i in range(len(ps)):
         p = ps[i]
-        X2=np.array([(p**2*prd[ph]-(1-p)**2*bprd[ph])**2/(prd[ph]*p**2+ p * (1 - p) * 2 * pprd[ph]+ (1-p)**2 * bprd[ph])+#no error ref
+
+        X2=np.array([(p**2*prd[ph]-(1-p)**2*bprd[ph])**2/(prd[ph]*p**2+ p * (1 - p) * 2 * pprd[ph]+ (1-p)**2 * bprd[ph])+sum(#no error ref
                     (p**2*prd[ph]*coefs[ph]/3-(1-p)**2*bprd[ph]/coefs[ph]*3)**2/(prd[ph]*coefs[ph]/3*p**2+ p * (1 - p) * 2 * pprd[ph]+ (1-p)**2 * bprd[ph]/coefs[ph]*3)+#1error ref->alt
-                    2*((p**2*prd[ph]*coefs[ph]/3-(1-p)**2*bprd[ph])**2/(prd[ph]*coefs[ph]/3*p**2+ p * (1 - p) * 2 * pprd[ph]*2*(1-3/(3+coefs[ph])) *(1-p)**2 * bprd[ph])) +# 1error wrong
+                    2*((p**2*prd[ph]*coefs[ph]/3-(1-p)**2*bprd[ph])**2/(prd[ph]*coefs[ph]/3*p**2+ p * (1 - p) * 2 * pprd[ph]*2*(1-3/(3+coefs[ph])) +(1-p)**2 * bprd[ph])) +# 1error wrong
                     (p**2*bprd[ph]-(1-p)**2*prd[ph])**2/(bprd[ph]*p**2+ p * (1 - p) * 2 * pprd[ph]+ (1-p)**2 * prd[ph])+#no error alt
                     (p**2*bprd[ph]/coefs[ph]*3-(1-p)**2*prd[ph]*coefs[ph]/3)**2/(bprd[ph]/coefs[ph]*3*p**2+ p * (1 - p) * 2 * pprd[ph]+ (1-p)**2 * prd[ph]*coefs[ph]/3)+#1error alt->ref
-                    2*((p**2*bprd[ph]-(1-p)**2*prd[ph]*coefs[ph]/3)**2/(bprd[ph]*p**2+ p * (1 - p) * 2 * pprd[ph]*2*(1-3/(3+coefs[ph]))* (1-p)**2 * prd[ph]*coefs[ph]/3)) +4*p-1 for ph in phs])# 1error wrong
-        Xp=np.array([(p**4*prd[ph]**2-(1-p)**2*p**2*bprd[ph]*prd[ph])/(prd[ph]*p**2+ p * (1 - p) * 2 * pprd[ph]+ (1-p)**2 * bprd[ph])+#no error ref
+                    2*((p**2*bprd[ph]-(1-p)**2*prd[ph]*coefs[ph]/3)**2/(bprd[ph]*p**2+ p * (1 - p) * 2 * pprd[ph]*2*(1-3/(3+coefs[ph]))+ (1-p)**2 * prd[ph]*coefs[ph]/3))) +4*p-1 for ph in range(len(phs))])# 1error wrong
+
+        Xp=np.array([(p**4*prd[ph]**2-(1-p)**2*p**2*bprd[ph]*prd[ph])/(prd[ph]*p**2+ p * (1 - p) * 2 * pprd[ph]+ (1-p)**2 * bprd[ph])+sum(#no error ref
                     (p**4*prd[ph]*coefs[ph]**2/9-(1-p)**2*p**2*bprd[ph]*prd[ph])/(prd[ph]*coefs[ph]/3*p**2+ p * (1 - p) * 2 * pprd[ph]+ (1-p)**2 * bprd[ph]/coefs[ph]*3)+#1error ref->alt
-                    2*((p**4*prd[ph]*coefs[ph]**2/9-(1-p)**2*p**2*bprd[ph]*prd[ph]*coefs[ph]/3)/(prd[ph]*coefs[ph]/3*p**2+ p * (1 - p) * 2 * pprd[ph]*2*(1-3/(3+coefs[ph]))*(1-p)**2 * bprd[ph])) +# 1error wrong
+                    2*((p**4*prd[ph]*coefs[ph]**2/9-(1-p)**2*p**2*bprd[ph]*prd[ph]*coefs[ph]/3)/(prd[ph]*coefs[ph]/3*p**2+ p * (1 - p) * 2 * pprd[ph]*2*(1-3/(3+coefs[ph]))+(1-p)**2 * bprd[ph])) +# 1error wrong
                     (p**4*bprd[ph]**2-(1-p)**2*p**2*prd[ph]*bprd[ph])/(bprd[ph]*p**2+ p * (1 - p) * 2 * pprd[ph]+ (1-p)**2 * prd[ph])+#no error alt
                     (p**4*bprd[ph]**2/coefs[ph]**2*9-(1-p)**2*p**2*prd[ph]*bprd[ph])/(bprd[ph]/coefs[ph]*3*p**2+ p * (1 - p) * 2 * pprd[ph]+ (1-p)**2 * prd[ph]*coefs[ph]/3)+#1error alt->ref
-                    2*((p**4*bprd[ph]**2-(1-p)**2*p**2*prd[ph]*bprd[ph]*coefs[ph]/3)/(bprd[ph]*p**2+ p * (1 - p) * 2 * pprd[ph]*2*(1-3/(3+coefs[ph])) *(1-p)**2 * prd[ph]*coefs[ph]/3)) +p**2 for ph in phs])# 1error wrong
-        p2=np.array([p**4*prd[ph]**2/(prd[ph]*p**2+ p * (1 - p) * 2 * pprd[ph]+ (1-p)**2 * bprd[ph])+#no error ref
+                    2*((p**4*bprd[ph]**2-(1-p)**2*p**2*prd[ph]*bprd[ph]*coefs[ph]/3)/(bprd[ph]*p**2+ p * (1 - p) * 2 * pprd[ph]*2*(1-3/(3+coefs[ph])) +(1-p)**2 * prd[ph]*coefs[ph]/3))) +p**2 for ph in range(len(phs))])# 1error wrong
+        p2=np.array([p**4*prd[ph]**2/(prd[ph]*p**2+ p * (1 - p) * 2 * pprd[ph]+ (1-p)**2 * bprd[ph])+sum(#no error ref
                     p**4*prd[ph]*coefs[ph]**2/9/(prd[ph]*coefs[ph]/3*p**2+ p * (1 - p) * 2 * pprd[ph]+ (1-p)**2 * bprd[ph]/coefs[ph]*3)+#1error ref->alt
-                    2*p**4*prd[ph]*coefs[ph]**2/9/(prd[ph]*coefs[ph]/3*p**2+ p * (1 - p) * 2 * pprd[ph]*2*(1-3/(3+coefs[ph]))*(1-p)**2 * bprd[ph]) +# 1error wrong
+                    2*p**4*prd[ph]*coefs[ph]**2/9/(prd[ph]*coefs[ph]/3*p**2+ p * (1 - p) * 2 * pprd[ph]*2*(1-3/(3+coefs[ph]))+(1-p)**2 * bprd[ph]) +# 1error wrong
                     p**4*bprd[ph]**2/(bprd[ph]*p**2+ p * (1 - p) * 2 * pprd[ph]+ (1-p)**2 * prd[ph])+#no error alt
                     p**4*bprd[ph]**2/coefs[ph]**2*9/(bprd[ph]/coefs[ph]*3*p**2+ p * (1 - p) * 2 * pprd[ph]+ (1-p)**2 * prd[ph]*coefs[ph]/3)+#1error alt->ref
-                    2*p**4*bprd[ph]**2/(bprd[ph]*p**2+ p * (1 - p) * 2 * pprd[ph]*2*(1-3/(3+coefs[ph]))*(1-p)**2 * prd[ph]*coefs[ph]/3) +p**2 for ph in phs])# 1error wrong
+                    2*p**4*bprd[ph]**2/(bprd[ph]*p**2+ p * (1 - p) * 2 * pprd[ph]*2*(1-3/(3+coefs[ph]))+(1-p)**2 * prd[ph]*coefs[ph]/3)) +p**2 for ph in range(len(phs))])# 1error wrong
         N=2*len(phs)
-        vals.append((sum(X2)*(2*N-1-4*p*(N-1)+4*p**2*(N-1)*(N-2)/(2*N-1))+4*sum(Xp)*(-1+8*p*(N-1)/(2*N-1))+8*p**3*N*(N-1)*(2*N-3))/N**2/(2*N-1)+
-                    (N-1)/N*4*p**2+(sum(X2)**2-sum(X2**2))/N**2/(2*N-1)**2+(4*p**4*(N-1)*(4*(N-2)**2+1)+4*sum(p2))/N/(2*N-1)**2-pi**2)
+
+        vals.append((sum(X2)*(2*N-1-4*p*(N-1)+4*p**2*(N-1)*(N-2)/(2*N-1))+4*sum(Xp)*(-1+2*p*(N-1)/(2*N-1))-8*p**3*N*(N-1)*(2*N-3))/N**2/(2*N-1)+
+                    (N-1)/N*4*p**2+(sum(X2)**2-sum(X2**2))/N**2/(2*N-1)**2+(4*p**4*(N-1)*(4*(N-2)**2+1)+4*sum(p2)/N)/N/(2*N-1)**2)#had -pi**2 ??
     return np.dot(prs, vals)# / sum(prs)
 def thetafindexp (nu,k,timesums):
     #np.mean(k*poisson.pmf(k,nu*timesums)-poisson.pmf(k+1,nu*timesums)*(k+1) )
@@ -488,7 +494,8 @@ if __name__ == '__main__':
                     elif tlsize:
                         print(np.sum(pool.starmap(PAvg , zip(pidata,pool.map(meanfrqs,pidata),(pidata,)*len(pidata)) )))
                     else:
-                        print(sum(PAvg(phs,ps,c=pidata) for phs,ps in pidata))#'nucleotide diversity:'
+
+                        print(sum(PAvg(phs,ps,c=pidata) for phs,ps in zip(pidata,map(meanfrqs,pidata))))#'nucleotide diversity:'
                 cpi=0
                 pidata=[]
             elif not wpi:#'nucleotide diversity:',
