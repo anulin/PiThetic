@@ -199,7 +199,8 @@ def loglhoodDiploid(p,   ph):
     return -np.prod([ sum(hmzglik(i,p,ph)for i in range(4))+2*sum(htrzglik(a,b,p,ph) for a,b in combinations(range(4),2))])
 def loglhoodPiDiploidB( phs):
     func=lambda p: sum(lhoodDiploidB(p, x, y, phs) + lhoodDiploidB(p, y, x, phs) for x, y in combinations({b'a', b't', b'c', b'g'}, 2))
-    return op.minimize_scalar(func,bounds=[0,0.5])['x']
+    p= op.minimize_scalar(func,bounds=[0,0.5])['x']
+    return 2*p*(1-p)
     # return loglhoodDiploidB(p, x, y, phs)+loglhoodDiploidB(p, y, x, phs)
     # return -np.prod([ p**2*np.prod(ph[0])*np.prod([(1-pr)/3 for pr in ph[1]])+2*p*(1-p)*htrzglik(0,1,p,ph)+
     #                      (1-p)**2*np.prod([(1-pr)/3 for pr in ph[0]])*np.prod( ph[1])])
@@ -343,7 +344,7 @@ if __name__ == '__main__':
         ff=True
     arg=sys.argv[strt:]
     proc = subprocess.Popen(['samtools', 'mpileup',*arg],stdout=subprocess.PIPE)
-    ccc=0
+    cth=0
     muts=0
     chr=0
     thetas=0
@@ -361,19 +362,16 @@ if __name__ == '__main__':
             break
         stats=stats.split(b'\t')
         phreds=[[1-10**(-0.1*(i-33)) for i in stats[j]] for j in range(5,len(stats),3)]
-        nucleotides=stats[4::3]#4::3
-        # print(stats[4::3])
+        nucleotides=stats[4::3]
         phs=[{b'a':[],b"g":[],b'c':[],b't':[]} for i in range(len(nucleotides))]
-        ns=[{b'a':0,b"g":0,b'c':0} for i in range(len(nucleotides))]
         skip=0
         number=b''
         if window:
             ncld=b''
             #sampsz=0
-            ccc += 1
+            cth += 1
         for i in range (len(nucleotides)):
             counter=0
-
             for nuc in np.frombuffer(nucleotides[i].lower(),dtype='S1'):#np.frombuffer so that nuc is b'' instead of int
 
                 if skip!=0:
@@ -392,60 +390,42 @@ if __name__ == '__main__':
 
                 elif nuc== b'+' or nuc==b'-':
                     number+=b'0'
-                elif nuc== b't':
-                    # tns+=1
-                    if window and ncld == b'':
-                        ncld = nuc
-                    # elif window and ncld!=nuc:
-                    #     two=1
-                    phs[i][nuc].append(phreds[i][counter])
-                    counter+=1
                 elif nuc.isalpha():
                     if window and ncld == b'':
                         ncld = nuc
-                    # elif window and ncld != nuc:
-                    #     two = 1
-                    ns[i][nuc]+=1
                     phs[i][nuc].append(phreds[i][counter])
                     counter+=1
             reads+=counter
-            # if window:
-            #     if two:
-            #         sampsz+=2
-            #     else:
-            #         sampsz+=2-2**-(len(phreds[i])-1)
-
-        if wpi or windowD or tlsize:
-            if chr!=stats[0]:
-                pidata = []
-                cpi=0
-                ccc=1
-                chr=stats[0]
+        if chr != stats[0] and (wpi or windowD or window):
+            pidata = []
+            cpi = 0
+            cth = 1
+            chr = stats[0]
+            thetas=0
+        if wpi or windowD or tlsize :
             cpi += 1
             if reads>1:
                 pidata.append(phs)
                 if pi and not wpi:
                     positions.append((stats[0].decode(),stats[1].decode()))
 
-        x,y=sorted( phs[0].keys(), key=lambda x:sum(len(phs[i][x]) for i in range(len(ns))) )[-2:]
+        x,y=sorted( phs[0].keys(), key=lambda x:sum(len(phs[i][x]) for i in range(len(phs))) )[-2:]
 
 
         if window :
-            if tlsize and ccc==window:
+            if tlsize and cth==window:
                 thetas=sum(pool.map(theta,pidata))
                 pidata=[]
             elif not tlsize and reads>1:
                 tmp=theta(phs)
                 thetas+= tmp#[0]
             #thetavrs+=tmp[1]
-        # if int(stats[1]) >   b'23203': seem to be 0 reads
-        #     print(nucleotides)
-        if window and ccc == window:#"theta:",
+        if window and cth == window:#"theta:",
 
-            print(stats[0].decode(),str(int(stats[1])-ccc)+'-'+stats[1].decode(), thetas)#/thetavrs*window)
-            ccc=0
+            print(stats[0].decode(), str(int(stats[1]) - cth) + '-' + stats[1].decode(), thetas)#/thetavrs*window)
+            cth=0
             thetas=0
-            thetavrs=0
+
         if ff:
             print(stats[0].decode(),stats[1].decode(), op.minimize_scalar(lhoodDiploidB, args=(y, x, phs), bounds=[0, 1])['x'], (y + b'(' + x + b')').decode())#'frequency:',
         if windowD:#"D':"
@@ -483,19 +463,18 @@ if __name__ == '__main__':
             if wpi  and cpi==wpi:
                 pis+=1
                 # pidata[-1].append(meanfrqs(phs))
-                if reads>1:
-                    print(stats[0].decode(),str(int(stats[1])-wpi)+'-'+stats[1].decode(),end=' ')
-                    if not accurate:
-                        if  tlsize:
-                            print(np.mean(pool.starmap( PAvg, zip(pidata,pool.map(meanfrqs,pidata)) )) )#'nucleotide diversity:'
-                        else:
-
-                            print(np.mean([PAvg(phs, ps) for phs, ps in zip(pidata,map(meanfrqs,pidata))]))
-                    elif tlsize:
-                        print(np.sum(pool.starmap(PAvg , zip(pidata,pool.map(meanfrqs,pidata),(pidata,)*len(pidata)) )))
+                print(stats[0].decode(),str(int(stats[1])-wpi)+'-'+stats[1].decode(),end=' ')
+                if not accurate:
+                    if  tlsize:
+                        print(np.mean(pool.starmap( PAvg, zip(pidata,pool.map(meanfrqs,pidata)) )) )#'nucleotide diversity:'
                     else:
 
-                        print(sum(PAvg(phs,ps,c=pidata) for phs,ps in zip(pidata,map(meanfrqs,pidata))))#'nucleotide diversity:'
+                        print(np.mean([PAvg(phs, ps) for phs, ps in zip(pidata,map(meanfrqs,pidata))]))
+                elif tlsize:
+                    print(np.sum(pool.starmap(PAvg , zip(pidata,pool.map(meanfrqs,pidata),(pidata,)*len(pidata)) )))
+                else:
+
+                    print(sum(PAvg(phs,ps,c=pidata) for phs,ps in zip(pidata,map(meanfrqs,pidata))))#'nucleotide diversity:'
                 cpi=0
                 pidata=[]
             elif not wpi:#'nucleotide diversity:',
@@ -514,4 +493,3 @@ if __name__ == '__main__':
         vls = pool.map(loglhoodPiDiploidB,pidata)
         for vl in range(len(vls)): print(*positions[vl],vls[vl])
         pidata, cpi = [], 0
-
