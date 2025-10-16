@@ -350,6 +350,7 @@ if __name__ == '__main__':
     thetas=0
     thetavrs=0
     pis=0
+    pidata = []
     times=[]
     timesums=[]
     N=10**6
@@ -493,3 +494,4 @@ if __name__ == '__main__':
         vls = pool.map(loglhoodPiDiploidB,pidata)
         for vl in range(len(vls)): print(*positions[vl],vls[vl])
         pidata, cpi = [], 0
+
