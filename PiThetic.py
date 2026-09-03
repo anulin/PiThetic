@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import subprocess
 import sys
+import math
 from itertools import combinations
 from multiprocessing import Pool
 import numpy as np
@@ -8,9 +9,7 @@ import scipy.optimize as op
 from numpy import random as ra
 from scipy.special import digamma, polygamma
 from scipy.stats import poisson
-import matplotlib.pyplot as plt
-# from os import environ
-# print(environ['OMP_NUM_THREADS'] )
+from numba import njit,prange, set_num_threads
 
 def harmonic(n):
     return digamma(n+1)+np.euler_gamma
@@ -288,7 +287,9 @@ def thetamedunb (nu,k,timesums):
 #     p1,p2,p3=arr
 #     return -np.sum(np.log([p1*pr+(1-p1)*(1-pr)/3 for pr in ph[:m1]]))-np.sum(np.log([p2*pr+(1-p2)*(1-pr)/3 for pr in ph[m1:m2]])) \
 #            -np.sum(np.log([p3*pr+(1-p3)*(1-pr)/3 for pr in ph[m2:m3]]))-np.sum(np.log([(p2+p1+p3)*(1-pr)/3+(1-p1-p2-p3)*(pr) for pr in ph[m3:]]))
+combs=np.array( list(combinations(range(4), 2)))
 def numbapipeline(strt):
+
     @njit(fastmath=True,  cache=True, nogil=True,inline='always')
     def lhoodDiploidB(p, x, y,A,B,C):
 
@@ -386,6 +387,7 @@ def numbapipeline(strt):
     accurate=False
     step=False
     if  '--t' in sys.argv :
+
         thrds=int(sys.argv[sys.argv.index('--t')+1])
         set_num_threads(thrds)
     if thrds>1:
@@ -563,6 +565,7 @@ if __name__ == '__main__':
             strt+=1
             wpi=int(sys.argv[sys.argv.index('--pi')+1])
         else:
+            strt+=1
             numbapipeline(strt)
             exit()
         strt+=1
