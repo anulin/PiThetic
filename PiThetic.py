@@ -288,6 +288,241 @@ def thetamedunb (nu,k,timesums):
 #     p1,p2,p3=arr
 #     return -np.sum(np.log([p1*pr+(1-p1)*(1-pr)/3 for pr in ph[:m1]]))-np.sum(np.log([p2*pr+(1-p2)*(1-pr)/3 for pr in ph[m1:m2]])) \
 #            -np.sum(np.log([p3*pr+(1-p3)*(1-pr)/3 for pr in ph[m2:m3]]))-np.sum(np.log([(p2+p1+p3)*(1-pr)/3+(1-p1-p2-p3)*(pr) for pr in ph[m3:]]))
+def numbapipeline(strt):
+    @njit(fastmath=True,  cache=True, nogil=True,inline='always')
+    def lhoodDiploidB(p, x, y,A,B,C):
+
+        return (p ** 2 * A[x] * C[y]+2 * p*(1-p)*B[x]*B[y]  +(1-p) ** 2 * C[x] * A[y])
+
+    @njit(fastmath=True, nogil=True)
+    def MlePiDip(idx,pidata,offs):
+
+        # mask=offs[idx-wpi:idx]==offs[idx-wpi+1:idx+1]
+        A = np.empty((4, wpiarg))
+        B = np.empty((4, wpiarg))
+        C = np.empty((4, wpiarg))
+        # print(wpi,idx)
+        for i in range(4):
+            for j in range(wpiarg):
+                start = offs[idx-wpiarg+j, i]
+                end   = offs[idx-wpiarg+j+1, i]
+                a = 1.0
+                b = 1.0
+                c = 1.0
+                for k in range(start, end):
+                    ph = pidata[i][k]
+                    a *= ph
+                    b *= (1.0 + 2.0 * ph) / 6.0
+                    c *= (1.0 - ph) / 3.0
+                A[i, j] = a
+                B[i, j] = b
+                C[i, j] = c
+
+        p=round( golden_search(A,B,C),8)
+        return 2 * p * (1 - p)
+    @njit( fastmath=True, cache=True, nogil=True)
+    def func(p,A,B,C):
+
+        total = (np.prod(lhoodDiploidB(p, combs[0,0],combs[0,1], A, B, C))
+                 +np.prod( lhoodDiploidB(1.0 - p, combs[0,0],combs[0,1], A, B, C)) )*np.prod(C[combs[5 - 0,1]] * C[combs[5 - 0,0]])
+        for i in range(1,6):
+            total += (np.prod(lhoodDiploidB(p, combs[i,0],combs[i,1], A, B, C)) + \
+                      np.prod( lhoodDiploidB(1.0 - p, combs[i,0],combs[i,1], A, B, C))) * \
+                     np.prod(C[combs[5 - i,1]] * C[combs[5 - i,0]])
+        return -total
+    @njit(  cache=True, nogil=True)
+    def golden_search(A,B,C, a=0.0, b=0.5, tol=1e-8, max_iter=100):
+
+        invphi = (math.sqrt(5.0) - 1.0) / 2.0
+        invphi2 = (3.0 - math.sqrt(5.0)) / 2.0
+
+        c = a + invphi2 * (b - a)
+        d = a + invphi * (b - a)
+
+        fc = func(c,A,B,C)
+        fd = func(d,A,B,C)
+
+        for _ in range(max_iter):
+            if b - a < tol:
+                break
+
+            if fc < fd:
+                b = d
+                d = c
+                fd = fc
+                c = a + invphi2 * (b - a)
+                fc = func(c,A,B,C)
+            else:
+                a = c
+                c = d
+                fc = fd
+                d = a + invphi * (b - a)
+                fd = func(d,A,B,C)
+
+        x = 0.5 * (a + b)
+        return x#, func(x,A,B,C)
+    def process(positions, tlsize,windows):
+        global pidata
+        if windows:
+
+            pidata=tuple(np.asarray(pidatabuf[i]) for i in range(4))
+
+            if tlsize:
+
+                vls = list(map(lambda x: MlePiDip(x,pidata,offs), windows))
+                for vl in range(len(vls)): print(*positions[vl], vls[vl])
+            else:
+                print(*positions[0], MlePiHap(pidata))
+    thrds=1
+    hap=False
+    tlsize=0
+    pi=False
+    ff=False
+    window=False
+    cpi=0
+    wpi=1
+    # cov=10
+    positions=[]
+    accurate=False
+    step=False
+    if  '--t' in sys.argv :
+        thrds=int(sys.argv[sys.argv.index('--t')+1])
+        set_num_threads(thrds)
+    if thrds>1:
+        pool=Pool(thrds)
+        tlsize=max(8,thrds)
+    if  '--accurate' in sys.argv :
+        accurate=True
+    if  '--fst' in sys.argv :
+        raise ValueError("Error:--fst and --pi flags cannot be used simultaneously")
+    if '--pi' in sys.argv :
+
+        step=wpi
+        pi=True
+    if '--theta' in sys.argv:
+        raise ValueError("Error:--theta and --pi flags cannot be used simultaneously")
+    if '--cov' in sys.argv:
+        cov=int(sys.argv[sys.argv.index('--cov')+1])
+        step=int(sys.argv[sys.argv.index('--theta')+2])
+        strt += 2
+
+    if '--D' in sys.argv:
+        raise ValueError("Error:--D' and --pi flags cannot be used simultaneously")
+    if '--d' in sys.argv:
+        hap=False
+        strt += 1
+    if not pi+window or '--freq' in sys.argv:
+        raise ValueError("Error:--freq and --pi flags cannot be used simultaneously")
+    if  '--step' in sys.argv :
+        strt += 2
+        step=int(sys.argv[sys.argv.index('--step')+1])
+    arg=sys.argv[strt:]
+    proc = subprocess.Popen(['samtools', 'mpileup',*arg],stdout=subprocess.PIPE)
+    # proc=subprocess.Popen(['tail','-n', '+0'],stdin=pproc.stdout,stdout=subprocess.PIPE)
+    # pproc.stdout.close()
+    ccc=0
+    chr=0
+    pidatabuf = [[],[],[],[]]
+    zrofrc = []
+    N=10**6
+    table = [1 - 10 ** (-0.1 * (i - 33)) for i in range(128)]
+    windows=[]
+    ofc=0
+    ncnm={b'a':0,b"g":1,b'c':2,b't':3}
+    wpiarg=len(arg)*wpi
+    offs=np.zeros([wpiarg*tlsize+1,4],dtype=int)
+    while True:
+
+        reads=0
+        stats = proc.stdout.readline()
+        if not stats:
+            break
+        stats=stats.split(b'\t') #maybe check coverage field directly
+        if chr!=stats[0] and wpi>0:
+            positions = positions[:len(windows)]
+            ofc -= ofc%step
+            cpi = 0
+            # pidatabuf = #if tlsize
+            for i in range(4):
+                del pidatabuf[i][offs[ofc,i]:]
+            zrofrc=[]
+            chr = stats[0]
+        phreds=[[table[i] for i in stats[j]] for j in range(5,len(stats),3)]
+        # if int(stats[3])<cov:
+        #     continue
+        nucleotides=stats[4::3]#4::3
+
+        # print(stats)
+
+        skip=0
+        number=b''
+
+        for i in range (len(nucleotides)):
+            counter=0
+
+            for nuc in np.frombuffer(nucleotides[i].lower(),dtype='S1'):#np.frombuffer so that nuc is b'' instead of int
+                if skip!=0:
+                    skip-=1
+                    continue
+                if number !=b'' and nuc.isalpha():
+                    skip=int(number)-1
+                    number=b''
+                elif nuc.isdigit():
+                    if number==b'':
+                        print('!!!!',b'\t'.join(stats))
+                        exit()
+                    number+=nuc
+                elif nuc==b'^':
+                    skip=1
+                elif nuc== b'+' or nuc==b'-':
+                    number+=b'0'
+                elif nuc.isalpha():
+
+                    pidatabuf[ncnm[nuc]].append(phreds[i][counter])
+                    counter+=1
+
+            reads+=counter
+            ofc+=1
+            offs[ofc]=[len(pidatabuf[i]) for i in range(4)]
+
+        if reads>1:
+            if pi:
+                zrofrc.append(0)
+        elif pi:
+            zrofrc.append(1)
+        cpi += 1
+
+        if (cpi - 1) % step == 0 and wpi>0:
+            positions.append((stats[0].decode(), stats[1].decode()))
+        if wpi>0 and (cpi-wpi)%step==0 and cpi>=wpi and tlsize :
+            if sum(zrofrc)/wpi>0.5:
+                positions.pop(len(windows))
+            else:
+                windows.append(ofc)#[cpi//step-wpi//step]=1
+            zrofrc=zrofrc[step:]
+        if pi:
+            if cpi==wpi and not tlsize or len(windows)==tlsize or ofc >= len(offs) - wpiarg :
+                if tlsize:
+                    if windows:
+                        process(positions,tlsize,windows)
+                    positions =positions[len(windows):]
+                    for i in range(4):
+                        pidatabuf[i][:offs[ofc-wpiarg+step*len(arg),i]]=[]
+                    offs-=offs[ofc-wpiarg+step*len(arg)]
+                    offs=np.roll(offs,-(ofc-wpiarg+step*len(arg)),axis=0)
+                else:
+                    process(pidatabuf,positions)
+                    positions =positions[1:]
+                    pidatabuf=pidatabuf[step:]
+                    zrofrc = zrofrc[step:]
+
+                cpi=wpi-step
+                ofc=cpi*len(arg)
+                windows=[]
+
+    if  cpi!=0:
+        if windows:
+            process(positions,tlsize,windows)
 if __name__ == '__main__':
     if '--h' in sys.argv:
         print('''PiThetic.py --[flag]  [samtools mpileup input] 
@@ -327,7 +562,9 @@ if __name__ == '__main__':
         if sys.argv[sys.argv.index('--pi')+1].isdigit():
             strt+=1
             wpi=int(sys.argv[sys.argv.index('--pi')+1])
-
+        else:
+            numbapipeline(strt)
+            exit()
         strt+=1
         pi=True
     if '--theta' in sys.argv:
